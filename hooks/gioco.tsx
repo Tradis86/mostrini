@@ -444,6 +444,7 @@ export function normalizza(salvato: Partial<Stato>): Stato {
     cancella: false,
     daCancellare: null,
     catalogoVista: null,
+    evoluzioni: [],
     sfere: caselle(salvato.sfere, salvato.megaSfere, 5),
     cure: caselle(salvato.cure, salvato.cureForti, 2),
     megaSfere: undefined,
@@ -781,8 +782,15 @@ function vittoria(s: Stato, rnd: () => number): Stato {
   )
   const monete = s.monete + vinte
   const all = s.allenatore
-  // la forma sconfitta diventa vista, quelle dei tuoi Mostrini appena evoluti catturate
-  const visto = possiedi(vedi(s, formaDi(nem)), squadra)
+  // la forma sconfitta diventa vista, quelle dei tuoi Mostrini appena evoluti catturate;
+  // le evoluzioni si mostrano poi una alla volta con l'animazione
+  const nuoveEvo = squadra
+    .map((m, i) => ({ sp: m.sp, da: stadio(s.squadra[i]!), a: stadio(m) }))
+    .filter(e => e.a > e.da)
+  const visto = {
+    ...possiedi(vedi(s, formaDi(nem)), squadra),
+    ...(nuoveEvo.length > 0 ? { evoluzioni: [...(s.evoluzioni ?? []), ...nuoveEvo] } : {}),
+  }
   if (all && all.squadra.length > 0) {
     const [prossimo, ...resto] = all.squadra
     const n = vedi({ ...visto, nemico: prossimo!, lancio: false, squadra, monete, allenatore: { ...all, squadra: resto } }, formaDi(prossimo!))
@@ -1183,6 +1191,8 @@ const PASSI: Record<string, [number, number]> = {
 
 export function tasto(s: Stato, k: ClientKeyEvent): Stato {
   const key = k.key.toLowerCase()
+  // Mentre si guarda un'evoluzione, un tasto qualsiasi passa alla prossima (o torna al gioco).
+  if (s.evoluzioni && s.evoluzioni.length > 0) return { ...s, evoluzioni: s.evoluzioni.slice(1) }
   if (s.modo === 'inizio') {
     const i = ['1', '2', '3'].indexOf(key)
 
@@ -1419,6 +1429,26 @@ const Gioco: ClientModule<any, Stato> = (props: Props, surface) => {
           })}
         </Box>
         {registro}
+      </Box>
+    )
+  }
+
+  // L'evoluzione: nell'app desktop l'animazione la disegna la pixel art, qui il racconto e il tasto per andare avanti.
+  const evo = s.evoluzioni?.[0]
+  if (evo) {
+    const prima = nomeForma(evo.sp, evo.da)
+    const dopo = nomeForma(evo.sp, evo.a)
+
+    return (
+      <Box flexDirection="column">
+        {testa}
+        <Box flexDirection="column" marginTop={1}>
+          <Text mono bold color={COL.io}>Cosa succede? {prima} si sta evolvendo...</Text>
+          {!grafica && <Text mono color="#ffffff">  ☁ ☁ ☁  POUF!  ☁ ☁ ☁</Text>}
+          <Text mono bold color={COLORE_TIPO[SPECIE[evo.sp]!.tipo]}>{prima} è diventato {dopo}!</Text>
+          {evo.a === 2 && <Text mono color={COL.io}>È la sua forma finale!</Text>}
+        </Box>
+        <Text mono dimColor>Premi un tasto per continuare{s.evoluzioni!.length > 1 ? ` (altre evoluzioni: ${s.evoluzioni!.length - 1})` : ''}</Text>
       </Box>
     )
   }

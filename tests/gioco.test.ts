@@ -290,6 +290,17 @@ test('dal livello 15 un Mostrino si evolve', () => {
   expect(s.log.at(-1)).toContain('si evolve in Bracione')
   // la forma nuova entra nel catalogo come catturata
   expect(s.catalogo).toContain('braciotto:1')
+  // e si vede l'animazione: il vecchio, la nuvola con POUF!, il nuovo; un tasto qualsiasi la chiude
+  expect(s.evoluzioni).toEqual([{ sp: 'braciotto', da: 0, a: 1 }])
+  const scena = svgPer(s)
+  expect(scena.animato).toBe(true)
+  expect(scena.source).toContain('<animate')
+  expect(scena.source).toContain('POUF!')
+  expect(scena.source.length).toBeLessThan(131072)
+  const dopo = tasto(s, { key: 'x' })
+  expect(dopo.evoluzioni).toEqual([])
+  expect(dopo.modo).toBe(s.modo)
+  expect(svgPer(dopo).animato).toBeUndefined()
   // sotto il 15 niente evoluzione, e chi è già evoluto resta com'è
   expect(evolve({ sp: 'goccetto', lvl: 14, xp: 0, hp: 10 }, []).evo).toBeUndefined()
   expect(evolve(io, [])).toBe(io)

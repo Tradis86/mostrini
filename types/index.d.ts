@@ -42,6 +42,8 @@ export type Stato = {
   allenatore?: { nome: string; squadra: Mostrino[]; palestra?: 'allievo' | 'capo' } | null
   // le lotte vinte nella palestra di ogni mondo: battuti tutti gli allievi e il capopalestra, arriva la medaglia
   palestre?: number[]
+  // le evoluzioni appena avvenute, da mostrare una alla volta con l'animazione (da e a sono gli stadi)
+  evoluzioni?: { sp: string; da: number; a: number }[]
   // dentro la palestra (entrando dalla G): la posizione nel salone; fuori x e y restano davanti alla G
   inPalestra?: { x: number; y: number } | null
   // le partite delle versioni precedenti: sfere e cure erano numeri, con mega sfere e super cure a parte

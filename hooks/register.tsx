@@ -110,7 +110,9 @@ export const register: Register = on => {
 
     return (
       <Box flexDirection="column" flexGrow={1}>
-        {disegno && <Svg source={disegno.source} alt={disegno.alt} />}
+        {/* Le animazioni (l'evoluzione) partono solo nel riquadro interattivo, che riceve le misure
+            esplicite per restare grande quanto la lotta (512 x 320). */}
+        {disegno && <Svg source={disegno.source} alt={disegno.alt} {...(disegno.animato ? { isInteractive: true, width: 512, height: 320 } : {})} />}
         <el.Client key="gioco" module="./gioco.tsx" props={{ partite: salvati.partite, attiva: salvati.attiva, grafica }} flexGrow={1} />
       </Box>
     )

@@ -1203,6 +1203,51 @@ export function svgLotta(s: Stato): string {
   return svg(640, 400, corpo)
 }
 
+// ---------- Evoluzione ----------
+
+// L'animazione dell'evoluzione (SVG animato, circa 3 secondi, una volta sola):
+// il vecchio Mostrino lampeggia, una nuvola di sbuffi lo copre con un grande POUF!,
+// e quando la nuvola svanisce c'è il nuovo Mostrino.
+export function svgEvoluzione(e: { sp: string; da: number; a: number }): string {
+  const cx = 320
+  const piedi = 340
+  // compare e scompare a un dato momento (in secondi)
+  const quando = (da: number, a = 99) =>
+    `<set attributeName="opacity" to="1" begin="${da}s" fill="freeze"/>` + (a < 99 ? `<set attributeName="opacity" to="0" begin="${a}s" fill="freeze"/>` : '')
+  const sbuffi: [number, number, number][] = [[0, 0, 62], [-62, 22, 44], [62, 22, 46], [-34, -40, 42], [38, -36, 44], [0, 46, 50], [-80, -6, 30], [84, -4, 30]]
+  const nuvola =
+    `<g>` +
+    sbuffi
+      .map(([dx, dy, r], i) =>
+        `<circle cx="${cx + dx}" cy="${240 + dy}" r="0" fill="${i % 2 ? '#f4f2fa' : '#ffffff'}" stroke="#c8c4dc" stroke-width="4" shape-rendering="auto">` +
+        `<animate attributeName="r" values="0;${Math.round(r * 1.15)};${r}" keyTimes="0;0.7;1" begin="${1.3 + i * 0.04}s" dur="0.5s" fill="freeze"/></circle>`,
+      )
+      .join('') +
+    `<animate attributeName="opacity" values="1;0" begin="2.5s" dur="0.7s" fill="freeze"/></g>`
+  const stelle = [[90, 60], [560, 80], [140, 250], [520, 240], [250, 40], [400, 30], [60, 170], [590, 170]]
+    .map(([x, y]) => `<path fill="#ffd84c" d="M${x! - 3} ${y}h7v2h-7zM${x} ${y! - 3}h2v8h-2z"/>`)
+    .join('')
+  const corpo =
+    `<rect width="640" height="400" fill="#2c2a48"/>` +
+    `<ellipse cx="${cx}" cy="215" rx="270" ry="185" fill="#3c3864"/>` +
+    `<ellipse cx="${cx}" cy="215" rx="180" ry="130" fill="#4a4678"/>` +
+    stelle +
+    `<ellipse cx="${cx}" cy="${piedi + 6}" rx="130" ry="24" fill="#6c6898"/>` +
+    `<ellipse cx="${cx}" cy="${piedi + 2}" rx="118" ry="18" fill="#8c88b8"/>` +
+    // il vecchio Mostrino lampeggia e poi sparisce dentro la nuvola
+    `<g>${mostroIn({ sp: e.sp, evo: e.da }, cx, piedi, 5)}` +
+    `<animate attributeName="opacity" values="1;0.15;1;0.15;1;0.15;1" begin="0.3s" dur="1.2s"/>` +
+    `<set attributeName="opacity" to="0" begin="1.8s" fill="freeze"/></g>` +
+    // il nuovo compare quando la nuvola copre tutto (con l'alone se è la forma finale)
+    `<g opacity="0">${e.a === 2 ? alone(cx, 236, 120, 110) : ''}${mostroIn({ sp: e.sp, evo: e.a }, cx, piedi, 5)}${quando(1.8)}</g>` +
+    nuvola +
+    `<g opacity="0">${scritta(cx, 110, 'POUF!', 64, '#ffd84c', 'middle', NERO)}${quando(1.6, 2.8)}</g>` +
+    `<g>${scritta(cx, 52, `Cosa succede? ${nomeForma(e.sp, e.da)} si evolve...`, 22, '#ffffff', 'middle', NERO)}${`<set attributeName="opacity" to="0" begin="2.8s" fill="freeze"/>`}</g>` +
+    `<g opacity="0">${scritta(cx, 52, `${nomeForma(e.sp, e.da)} è diventato ${nomeForma(e.sp, e.a)}!`, 22, '#ffd84c', 'middle', NERO)}${quando(2.8)}</g>`
+
+  return svg(640, 400, corpo)
+}
+
 // ---------- Menu, scelta iniziale e catalogo ----------
 
 // Il paesaggio del menu e della scelta iniziale: il cielo arriva fino al prato, così tra le colline
@@ -1322,9 +1367,14 @@ export function svgCatalogo(s: Stato): string {
   return svg(640, 462, corpo)
 }
 
-export function svgPer(s0: Stato): { source: string; alt: string } {
+// animato: il disegno contiene un'animazione, e il pannello deve mostrarlo in modo interattivo perché parta.
+export function svgPer(s0: Stato): { source: string; alt: string; animato?: boolean } {
   // Uno stato di una versione precedente può non avere mondo e box.
   const s: Stato = { ...s0, mondo: MONDI[s0.mondo] ? s0.mondo : 0, box: s0.box ?? [], catalogo: s0.catalogo ?? [] }
+  const evo = s.evoluzioni?.[0]
+  if (evo) {
+    return { source: svgEvoluzione(evo), alt: `${nomeForma(evo.sp, evo.da)} si evolve in ${nomeForma(evo.sp, evo.a)}`, animato: true }
+  }
   if (s.modo === 'menu') return { source: svgMenu(), alt: 'Mostrini: menu principale' }
   if (s.modo === 'inizio') return { source: svgInizio(), alt: 'Scegli il tuo primo Mostrino' }
   if (s.modo === 'lotta' && s.nemico && s.squadra[0]) {

@@ -12,9 +12,10 @@ export type Stato = {
   squadra: Mostrino[]
   // i Mostrini catturati con la squadra già piena
   box: Mostrino[]
-  // le specie catturate: nel catalogo e in lotta hanno la sfera
+  // le forme catturate (la specie per la forma base, "specie:1" e "specie:2" per l'evoluta e la finale):
+  // nel catalogo e in lotta hanno la sfera
   catalogo: string[]
-  // le specie incontrate o sconfitte, catturate o no
+  // le forme incontrate o sconfitte, catturate o no
   visti?: string[]
   // le sfere e le cure nello zaino, una casella per tipo: 0 la Sfera e la Cura, 1 la Mega sfera
   // e la Super cura, e così via (ogni mondo ne aggiunge una al negozio)
@@ -41,6 +42,8 @@ export type Stato = {
   allenatore?: { nome: string; squadra: Mostrino[]; palestra?: 'allievo' | 'capo' } | null
   // le lotte vinte nella palestra di ogni mondo: battuti tutti gli allievi e il capopalestra, arriva la medaglia
   palestre?: number[]
+  // dentro la palestra (entrando dalla G): la posizione nel salone; fuori x e y restano davanti alla G
+  inPalestra?: { x: number; y: number } | null
   // le partite delle versioni precedenti: sfere e cure erano numeri, con mega sfere e super cure a parte
   megaSfere?: number
   cureForti?: number

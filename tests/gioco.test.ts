@@ -2,7 +2,8 @@ import { test, expect } from 'claude-code/testing'
 import {
   statoIniziale, scegliIniziale, muovi, azione, efficacia, apriScambio, normalizza, portaleAperto, specieDel, catalogoDel, usaCura, tasto, cambiaInLotta, compra, rilascia, sfida, lancia, tastoMenu, statoMenu, CENTRO,
   MAPPA, MONDI, SPECIE, SFERE, CURE, SFERE_MAX, CURE_MAX, VERSIONE, bioma, livelloNel, evolve, nome, maxHp, stadio, vociCatalogo, descrizione,
-  articoli, probCattura, allievi, vinteIn, medaglia, squadraCapo, panoramica,
+  articoli, probCattura, allievi, vinteIn, medaglia, squadraCapo, contiCatalogo, numeroVoce, FORME,
+  muoviInPalestra, casellaSalone, postoSfidante, saloneLargo, TAPPETO,
 } from '../hooks/gioco.tsx'
 import type { Stato } from '../hooks/gioco.tsx'
 import { DISEGNI, svgPer } from '../hooks/grafica.ts'
@@ -54,24 +55,52 @@ function vinci(s: Stato): Stato {
   return n
 }
 
-test('in palestra si battono n+2 allievi e poi il capopalestra, che dà la medaglia', () => {
+// Cammina a destra sul tappeto della palestra finché non parte una lotta (o non si va più avanti).
+function avanza(s: Stato): Stato {
+  let n = s
+  for (let i = 0; i < 40 && n.modo === 'mappa'; i++) {
+    const dopo = muoviInPalestra(n, 1, 0, () => 0.5)
+    if (dopo === n) break
+    n = dopo
+  }
+
+  return n
+}
+
+test('in palestra si entra in un salone: n+2 allievi in fila, poi il capopalestra', () => {
   expect(allievi(0)).toBe(3)
   expect(allievi(4)).toBe(7)
   let s = scegliIniziale(statoIniziale(), 0)
   s = { ...s, squadra: [{ sp: 'braciotto', lvl: 60, xp: 0, hp: 999 }] }
-  // la palestra della Prateria è in (12,1): ci si entra da (12,2)
+  // la palestra della Prateria è in (12,1): ci si entra da (12,2) e si resta davanti alla porta
   expect(MONDI[0]!.mappa[1]![12]).toBe('G')
+  s = muovi({ ...s, x: 12, y: 2 }, 0, -1, () => 0.5)
+  expect(s.inPalestra).toEqual({ x: 1, y: TAPPETO })
+  expect([s.x, s.y]).toEqual([12, 2])
+  expect(s.modo).toBe('mappa')
+  // il salone: porta a sinistra, allievi sul tappeto, capopalestra in fondo
+  expect(casellaSalone(s, 0, TAPPETO)).toBe('<')
+  expect(casellaSalone(s, postoSfidante(0), TAPPETO)).toBe('a')
+  expect(casellaSalone(s, postoSfidante(allievi(0)), TAPPETO)).toBe('K')
+  expect(saloneLargo(0)).toBe(postoSfidante(allievi(0)) + 2)
+  // in su e in giù non ci si muove: si cammina solo sul tappeto
+  expect(muoviInPalestra(s, 0, -1)).toBe(s)
   for (let k = 0; k < allievi(0); k++) {
-    s = muovi({ ...s, x: 12, y: 2 }, 0, -1, () => 0.5)
+    s = avanza(s)
+    // la sfida parte fermandosi davanti all'allievo
+    expect(s.modo).toBe('lotta')
+    expect(s.inPalestra!.x).toBe(postoSfidante(k) - 1)
     expect(s.allenatore?.palestra).toBe('allievo')
     // niente fuga e niente cattura in palestra
     expect(azione(s, 5, () => 0).modo).toBe('lotta')
     expect(lancia(s, 0, () => 0).modo).toBe('lotta')
     s = vinci(s)
     expect(vinteIn(s, 0)).toBe(k + 1)
+    // l'allievo battuto si sposta di lato e lascia passare
+    expect(casellaSalone(s, postoSfidante(k), TAPPETO)).toBe('=')
   }
   expect(portaleAperto(s)).toBe(false)
-  s = muovi({ ...s, x: 12, y: 2 }, 0, -1, () => 0.5)
+  s = avanza(s)
   expect(s.allenatore?.palestra).toBe('capo')
   expect(s.allenatore?.nome).toBe('Capopalestra Flora')
   expect(s.allenatore!.squadra.length + 1).toBe(squadraCapo(0).length)
@@ -81,8 +110,15 @@ test('in palestra si battono n+2 allievi e poi il capopalestra, che dà la medag
   expect(portaleAperto(s)).toBe(true)
   expect(s.monete).toBeGreaterThan(monete)
   expect(s.log.join(' ')).toContain('Medaglia Foglia')
-  // ci si può tornare, ma la medaglia ce l'hai già
-  expect(muovi({ ...s, x: 12, y: 2 }, 0, -1).modo).toBe('mappa')
+  // il capopalestra resta in fondo e non si passa; dalla porta si esce
+  expect(avanza(s).modo).toBe('mappa')
+  let fuori = s
+  for (let i = 0; i < 40 && fuori.inPalestra; i++) fuori = muoviInPalestra(fuori, -1, 0)
+  expect(fuori.inPalestra).toBeNull()
+  expect([fuori.x, fuori.y]).toEqual([12, 2])
+  // rientrando, la medaglia ce l'hai già
+  const dentro = muovi(fuori, 0, -1)
+  expect(dentro.log.join(' ')).toContain('Hai già la Medaglia Foglia')
   // il capopalestra chiude con il raro del mondo, più forte degli altri
   for (let m = 0; m < MONDI.length; m++) {
     const squadra = squadraCapo(m)
@@ -98,7 +134,8 @@ test('il portale si apre con la medaglia della palestra, non col catalogo', () =
   s = { ...s, palestre: [allievi(0) + 1, 0, 0, 0, 0] }
   s = muovi(s, 1, 0, () => 0.99)
   expect(s.mondo).toBe(1)
-  expect(catalogoDel(s)).toEqual({ presi: 9, tot: 18 })
+  // sulle Vette il catalogo conta le forme di due mondi: 2 x 27
+  expect(catalogoDel(s)).toEqual({ presi: 9, tot: 54 })
   // il P delle Vette Gelate è in (18,1): chiuso finché non vinci la loro palestra
   expect(muovi({ ...s, x: 17, y: 1 }, 1, 0, () => 0.99).mondo).toBe(1)
   const deserto = muovi({ ...s, x: 17, y: 1, palestre: [4, allievi(1) + 1, 0, 0, 0] }, 1, 0, () => 0.99)
@@ -251,6 +288,8 @@ test('dal livello 15 un Mostrino si evolve', () => {
   expect(nome(io)).toBe('Bracione')
   expect(maxHp(io)).toBeGreaterThan(prima)
   expect(s.log.at(-1)).toContain('si evolve in Bracione')
+  // la forma nuova entra nel catalogo come catturata
+  expect(s.catalogo).toContain('braciotto:1')
   // sotto il 15 niente evoluzione, e chi è già evoluto resta com'è
   expect(evolve({ sp: 'goccetto', lvl: 14, xp: 0, hp: 10 }, []).evo).toBeUndefined()
   expect(evolve(io, [])).toBe(io)
@@ -297,36 +336,42 @@ test('sconfiggere segna un Mostrino come visto, solo catturarlo lo mette nel cat
   expect(s.catalogo).not.toContain('piumino')
   s = lancia({ ...s, modo: 'lotta', nemico: { sp: 'piumino', lvl: 2, xp: 0, hp: 1 } }, 0, () => 0)
   expect(s.catalogo).toContain('piumino')
+  // ogni forma ha la sua voce: catturare un evoluto registra la forma evoluta, non la base
+  const evoluto = lancia({ ...s, modo: 'lotta', nemico: { sp: 'ondina', lvl: 16, xp: 0, hp: 1, evo: 1 } }, 0, () => 0)
+  expect(evoluto.catalogo).toContain('ondina:1')
+  expect(evoluto.catalogo).not.toContain('ondina')
   // anche solo incontrarlo lo rende visto
   const incontro = muovi(muovi(scegliIniziale(statoIniziale(), 0), 1, 0, () => 0.5), 1, 0, () => 0.01)
   expect(incontro.visti).toContain(incontro.nemico!.sp)
 })
 
-test('il catalogo mostra chi hai preso, chi hai visto e chi manca, mondo per mondo', () => {
+test('il catalogo ha una voce per ogni forma: 27 per mondo, 135 in tutto', () => {
   let s = scegliIniziale(statoIniziale(), 0)
-  s = { ...s, catalogo: ['braciotto', 'zampetto'], visti: ['braciotto', 'zampetto', 'piumino'] }
+  s = { ...s, catalogo: ['braciotto', 'braciotto:1', 'zampetto'], visti: ['braciotto', 'braciotto:1', 'braciotto:2', 'zampetto', 'piumino'] }
   s = tasto(s, { key: 'l' })
   expect(s.catalogoVista).toEqual({ mondo: 0, sel: 0 })
   const voci = vociCatalogo(s, 0)
-  expect(voci.length).toBe(9)
-  expect(voci.filter(v => v.preso).map(v => v.sp)).toEqual(['braciotto', 'zampetto'])
-  expect(voci.filter(v => v.visto && !v.preso).map(v => v.sp)).toEqual(['piumino'])
-  // chi non è né visto né catturato è solo un ? con ????? al posto del nome, in ogni mondo
-  expect(voci.filter(v => !v.visto).length).toBe(6)
+  expect(voci.length).toBe(9 * FORME)
+  expect(MONDI.flatMap((_, m) => vociCatalogo(s, m)).length).toBe(135)
+  // ogni riga è una specie con le sue tre forme, numerate di seguito
+  expect(voci.slice(0, 3).map(v => [v.sp, v.st, numeroVoce(v)])).toEqual([['braciotto', 0, '#001'], ['braciotto', 1, '#002'], ['braciotto', 2, '#003']])
+  expect(voci.filter(v => v.preso).map(v => `${v.sp}:${v.st}`)).toEqual(['braciotto:0', 'braciotto:1', 'zampetto:0'])
+  expect(voci.filter(v => v.visto && !v.preso).map(v => `${v.sp}:${v.st}`)).toEqual(['braciotto:2', 'piumino:0'])
+  // chi non è né visto né catturato è solo un ? con ????? al posto del nome
   expect(descrizione(voci[0]!)).toContain('Bracione')
-  expect(descrizione(voci[2]!)).toContain('?????')
-  expect(descrizione(voci[2]!)).not.toContain('Goccetto')
-  expect(descrizione(voci.find(v => v.sp === 'piumino')!)).toContain('visto')
+  expect(descrizione(voci[1]!)).toContain('evoluzione di Braciotto')
+  expect(descrizione(voci[2]!)).toContain('Pirodrago')
+  expect(descrizione(voci[3]!)).toContain('?????')
+  expect(descrizione(voci[3]!)).not.toContain('Fumarello')
   expect(descrizione(vociCatalogo(s, 2)[0]!)).toContain('?????')
-  // ci sono tutti i 45: ◓ catturati, ○ visti, ? mai visti
-  expect(panoramica(s).join('').length).toBe(Object.keys(SPECIE).length)
-  expect(panoramica(s)[0]).toBe('◓?????◓○?')
-  // frecce: destra scorre, giù salta una riga, oltre l'ultimo si passa al mondo dopo
+  expect(contiCatalogo(s)[0]).toEqual({ presi: 3, visti: 5, tot: 27 })
+  expect(catalogoDel(s)).toEqual({ presi: 3, tot: 27 })
+  // frecce: destra scorre, giù salta una riga (una specie), oltre l'ultima forma si passa al mondo dopo
   s = tasto(s, { key: 'right' })
   expect(s.catalogoVista?.sel).toBe(1)
   s = tasto(s, { key: 'down' })
   expect(s.catalogoVista?.sel).toBe(4)
-  s = { ...s, catalogoVista: { mondo: 0, sel: 8 } }
+  s = { ...s, catalogoVista: { mondo: 0, sel: 26 } }
   s = tasto(s, { key: 'right' })
   expect(s.catalogoVista).toEqual({ mondo: 1, sel: 0 })
   s = tasto(s, { key: '5' })
@@ -342,13 +387,15 @@ test('il menu mostra la versione', () => {
 })
 
 test('ogni disegno sta nel limite del pannello', () => {
-  const tutte = Object.keys(SPECIE)
-  const base = { ...scegliIniziale(statoIniziale(), 0), catalogo: tutte }
+  // il caso più pesante: tutte le forme catturate, quindi ogni scheda del catalogo col suo disegno
+  const tutte = Object.keys(SPECIE).flatMap(sp => [sp, `${sp}:1`, `${sp}:2`])
+  const base = { ...scegliIniziale(statoIniziale(), 0), catalogo: tutte, visti: tutte }
   const disegni = [svgPer({ ...base, modo: 'menu' }), svgPer(statoIniziale())]
   MONDI.forEach((_, mondo) => {
     const forte = { sp: specieDel(mondo)[0]!, lvl: 40, xp: 0, hp: 50, evo: 2 }
     disegni.push(svgPer({ ...base, mondo }))
-    disegni.push(svgPer({ ...base, mondo, catalogoVista: { mondo, sel: 0 } }))
+    for (const sel of [0, 9, 18]) disegni.push(svgPer({ ...base, mondo, catalogoVista: { mondo, sel } }))
+    disegni.push(svgPer({ ...base, mondo, inPalestra: { x: 5, y: TAPPETO }, palestre: [2, 2, 2, 2, 2] }))
     disegni.push(svgPer({ ...base, mondo, modo: 'lotta', squadra: [forte, forte, forte], nemico: forte, lancio: true, lanciata: 4, allenatore: { nome: 'Custode Elio', squadra: [forte, forte], palestra: 'capo' } }))
   })
   for (const d of disegni) {
@@ -526,7 +573,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(salvati[0].partite[0].squadra[0].sp).toBe('goccetto')
     // L apre il catalogo della Prateria e lo richiude
     await ui.key({ in: 'gioco', key: 'l' })
-    expect(await ui.find({ in: 'gioco', text: /Catalogo · 1\/5 Prateria 1\/9/ })).toBeTruthy()
+    expect(await ui.find({ in: 'gioco', text: /Catalogo · 1\/5 Prateria 1\/27/ })).toBeTruthy()
     await ui.key({ in: 'gioco', key: 'l' })
     expect(await ui.find({ in: 'gioco', text: /L catalogo/ })).toBeTruthy()
     // un passo e poi P: la partita si salva con la nuova posizione e si torna al menu

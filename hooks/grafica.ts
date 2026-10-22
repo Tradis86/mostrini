@@ -1,5 +1,8 @@
 import type { Mostrino, Stato } from '../types'
-import { SPECIE, MONDI, INIZIALI, maxHp, casellaDi, nome, stadio, vociCatalogo, VERSIONE, COLORE_SFERA, SCONOSCIUTO } from './gioco.tsx'
+import {
+  SPECIE, MONDI, INIZIALI, maxHp, casellaDi, nome, stadio, vociCatalogo, VERSIONE, COLORE_SFERA, SCONOSCIUTO,
+  FORME, PER_PAGINA_CATALOGO, paginaCatalogo, nomeForma, numeroVoce, saloneLargo, SALONE_ALTO, TAPPETO, casellaSalone,
+} from './gioco.tsx'
 
 // Pixel art per l'app desktop, a risoluzione doppia. Ogni disegno nasce su una tela di pixel e
 // diventa un SVG con un solo path per colore: il pannello accetta SVG fino a 131072 caratteri.
@@ -558,10 +561,11 @@ function scritta(x: number, y: number, testo: string, dim: number, colore = NERO
   return `<text x="${x}" y="${y}" font-size="${dim}" fill="${colore}" text-anchor="${ancora}"${b} ${FONT}>${esc(testo)}</text>`
 }
 
-// Il disegno intero: viewBox a risoluzione doppia, mostrato alla stessa grandezza di prima.
-function svg(w: number, h: number, corpo: string) {
+// Il disegno intero: viewBox a risoluzione doppia, mostrato alla stessa grandezza di prima
+// (o largo quanto si chiede, come il salone della palestra, che così è grande come la mappa).
+function svg(w: number, h: number, corpo: string, largo = w * 0.8) {
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${Math.round(w * 0.8)}" height="${Math.round(h * 0.8)}" shape-rendering="crispEdges">` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${Math.round(largo)}" height="${Math.round((h * largo) / w)}" shape-rendering="crispEdges">` +
     corpo +
     '</svg>'
   )
@@ -883,6 +887,158 @@ export function svgMappa(s: Stato): string {
   return svg(mappa[0]!.length * T, mappa.length * T, corpo)
 }
 
+// ---------- La palestra dentro ----------
+
+// Il capopalestra: capelli al posto del berretto, un mantello e la medaglia sul petto.
+const CAPO = [
+  '................',
+  '....hhhhhhhh....',
+  '...hhhhhhhhhh...',
+  '..hhhhhhhhhhhh..',
+  '..hhhhhhhhhhhh..',
+  '..hssssssssssh..',
+  '..hssksssskssh..',
+  '..hssksssskssh..',
+  '...ssssssssss...',
+  '....sssMMsss....',
+  '.cbbbbbbbbbbbbc.',
+  'ccbbbbbzzbbbbbcc',
+  'csbbbbbbbbbbbbsc',
+  'csbbbbbbbbbbbbsc',
+  'ccbbbbbbbbbbbbcc',
+  'cc.nnnnnnnnnn.cc',
+  'cc.nnnnnnnnnn.cc',
+  '...nnnn..nnnn...',
+  '...nnnn..nnnn...',
+  '..kkkkk..kkkkk..',
+]
+
+// I capelli dei cinque capipalestra.
+const CAPELLI = ['#3f9a3c', '#bfe6ff', '#c8862c', '#9c4cc8', '#2a2240']
+
+function personaggio(righe: string[], colori: Tavolozza): Tela {
+  const t = tela(18, 22)
+  lettere(t, righe, colori, 1, 1)
+  contorno(t)
+
+  return t
+}
+
+function pavimento(tinta: string): Tela {
+  const t = tela(T, T)
+  const a = mescola('#e6e2ee', tinta, 0.08)
+  const b = mescola('#d2cede', tinta, 0.14)
+  rett(t, 0, 0, T, T, (x: number, y: number) => ((Math.floor(x / 16) + Math.floor(y / 16)) % 2 ? a : b))
+  rett(t, 0, 0, T, 1, chiaro(a, 0.3))
+
+  return t
+}
+
+function muroSalone(tinta: string): Tela {
+  const t = tela(T, T)
+  const base = mescola('#4a4460', tinta, 0.3)
+  rett(t, 0, 0, T, T, base)
+  for (let y = 0; y < T; y += 8) {
+    rett(t, 0, y, T, 1, scuro(base, 0.3))
+    rett(t, 0, y + 1, T, 1, chiaro(base, 0.12))
+    for (let x = (y / 8) % 2 ? 8 : 0; x < T; x += 16) rett(t, x, y, 1, 8, scuro(base, 0.3))
+  }
+
+  return t
+}
+
+function tappeto(tinta: string): Tela {
+  const t = pavimento(tinta)
+  rett(t, 0, 3, T, 26, '#ffd84c')
+  rett(t, 0, 5, T, 22, '#c83a4a')
+  rett(t, 0, 15, T, 2, '#a82a3a')
+  for (const x of [4, 20]) rett(t, x, 9, 8, 2, '#e85a6a')
+
+  return t
+}
+
+function colonnaSalone(tinta: string): Tela {
+  const t = pavimento(tinta)
+  ellisse(t, 16, 28, 10, 3, scuro(mescola('#d2cede', tinta, 0.14), 0.2))
+  const s = tela(T, T)
+  const pietra = (x: number) => (x < 13 ? '#f2f0f8' : x > 19 ? '#a8a4b8' : '#d8d4e4')
+  rett(s, 9, 24, 14, 5, pietra)
+  rett(s, 11, 7, 10, 17, pietra)
+  rett(s, 9, 3, 14, 4, pietra)
+  rett(s, 9, 6, 14, 1, mescola('#a8a4b8', tinta, 0.3))
+  contorno(s)
+  componi(t, s)
+
+  return t
+}
+
+function portaSalone(tinta: string): Tela {
+  const t = muroSalone(tinta)
+  ellisse(t, 16, 12, 9, 6, '#ffd84c')
+  rett(t, 7, 12, 18, 20, '#ffd84c')
+  ellisse(t, 16, 12, 7, 5, '#1c1828')
+  rett(t, 9, 12, 14, 20, '#1c1828')
+
+  return t
+}
+
+function pedanaCapo(tinta: string): Tela {
+  const t = tappeto(tinta)
+  ellisse(t, 16, 25, 15, 5.5, '#c88a1c')
+  ellisse(t, 16, 24, 13, 4, '#ffd84c')
+  ellisse(t, 13, 23, 5, 1.5, '#fff3b0')
+
+  return t
+}
+
+const cacheSaloni = new Map<number, string>()
+
+function pezziSalone(mondo: number): string {
+  const pronti = cacheSaloni.get(mondo)
+  if (pronti) return pronti
+  const tinta = COLORE_TIPO[MONDI[mondo]!.palestra.tipo] ?? '#888888'
+  const allievo = { ...GIOCATORE_COLORI, r: tinta, R: scuro(tinta, 0.3), b: '#6a6478', n: '#3a3448', h: '#5a3a24' }
+  const capo = { ...GIOCATORE_COLORI, h: CAPELLI[mondo] ?? '#4a3020', b: tinta, c: scuro(tinta, 0.35), z: '#ffd84c', n: '#3a3448' }
+  const defs: [string, Tela][] = [
+    ['sm', muroSalone(tinta)], ['sd', portaSalone(tinta)], ['sp', pavimento(tinta)], ['st', tappeto(tinta)],
+    ['so', colonnaSalone(tinta)], ['sk', pedanaCapo(tinta)],
+  ]
+  const out =
+    '<defs>' +
+    defs.map(([id, t]) => `<g id="${id}">${svgTela(t, 0, 0, 1)}</g>`).join('') +
+    `<g id="pa">${svgTela(personaggio(GIOCATORE, allievo), 0, 0, 1)}</g>` +
+    `<g id="pc">${svgTela(personaggio(CAPO, capo), 0, 0, 1)}</g>` +
+    '</defs>'
+  cacheSaloni.set(mondo, out)
+
+  return out
+}
+
+// Il salone della palestra: il tappeto con gli allievi in fila, il capopalestra in fondo sulla pedana.
+export function svgPalestra(s: Stato): string {
+  const largo = saloneLargo(s.mondo)
+  let corpo = pezziSalone(s.mondo)
+  let figure = ''
+  const persona = (id: string, x: number, y: number, attenuato = false) =>
+    `<ellipse cx="${x * T + 16}" cy="${y * T + 29}" rx="8" ry="2.5" fill="${NERO}" opacity="0.3"/>` +
+    `<use href="#${id}" x="${x * T + 6}" y="${y * T + 8}"${attenuato ? ' opacity="0.55"' : ''}/>`
+  for (let y = 0; y < SALONE_ALTO; y++) {
+    for (let x = 0; x < largo; x++) {
+      const c = casellaSalone(s, x, y)
+      const id = c === '#' ? 'sm' : c === '<' ? 'sd' : c === 'o' ? 'so' : c === 'K' ? 'sk' : c === '=' || c === 'a' ? 'st' : 'sp'
+      corpo += `<use href="#${id}" x="${x * T}" y="${y * T}"/>`
+      if (c === 'a') figure += persona('pa', x, y)
+      if (c === 'b') figure += persona('pa', x, y, true)
+      if (c === 'K') figure += persona('pc', x, y)
+    }
+  }
+  const p = s.inPalestra ?? { x: 1, y: TAPPETO }
+  figure += `<ellipse cx="${p.x * T + 16}" cy="${p.y * T + 29}" rx="8" ry="2.5" fill="${NERO}" opacity="0.3"/>`
+  figure += svgTela(giocatore(), p.x * T + 7, p.y * T + 9, 1)
+
+  return svg(largo * T, SALONE_ALTO * T, corpo + figure, 512)
+}
+
 // ---------- Lotta ----------
 
 // Gli sfondi delle lotte: cielo a fasce, paesaggio del bioma, terreno e pedane.
@@ -1102,27 +1258,31 @@ const COLORE_TIPO: Record<string, string> = {
 // Il punto di domanda dei Mostrini mai visti.
 const DOMANDA = ['.kkkk.', 'kk..kk', '....kk', '...kk.', '..kk..', '..kk..', '......', '..kk..']
 
-// Il catalogo: una pagina per mondo, nove schede con il Mostrino, il numero, il nome e il tipo;
-// in fondo tutti i 45 in fila, mondo per mondo.
+// Il catalogo: per ogni mondo tre pagine da tre righe; ogni riga è una specie con le sue tre forme
+// (base, evoluta, finale), e ogni scheda ha il Mostrino, il numero, il nome e il tipo.
+// In fondo tutte le 135 forme: una colonna per specie, con le tre forme una sotto l'altra.
 export function svgCatalogo(s: Stato): string {
   const cv = s.catalogoVista ?? { mondo: s.mondo, sel: 0 }
   const voci = vociCatalogo(s, cv.mondo)
   const presi = voci.filter(v => v.preso).length
+  const pagina = paginaCatalogo(cv.sel)
+  const pagine = Math.ceil(voci.length / PER_PAGINA_CATALOGO)
   const domanda = tela(6, 8)
   lettere(domanda, DOMANDA, { k: '#8a86a0' }, 0, 0)
   let corpo =
     `<rect width="640" height="462" fill="#2c2a48"/>` +
     `<rect width="640" height="52" fill="#423e6c"/>` +
     scritta(20, 34, `Catalogo · ${MONDI[cv.mondo]!.nome}`, 22, '#ffffff') +
-    scritta(470, 34, `${presi}/${voci.length}`, 22, presi === voci.length ? '#ffd84c' : '#ffffff', 'end') +
+    scritta(330, 33, `pag. ${pagina + 1}/${pagine}`, 15, '#c8c4e0') +
+    scritta(476, 34, `${presi}/${voci.length}`, 22, presi === voci.length ? '#ffd84c' : '#ffffff', 'end') +
     MONDI.map((_, i) =>
       `<rect x="${492 + i * 28}" y="16" width="22" height="22" rx="4" fill="${i === cv.mondo ? '#ffd84c' : '#6c6898'}" shape-rendering="auto"/>` +
       scritta(503 + i * 28, 33, String(i + 1), 15, i === cv.mondo ? NERO : '#ffffff', 'middle'),
     ).join('')
-  voci.forEach((v, i) => {
-    const x = 14 + (i % 3) * 206
-    const y = 62 + Math.floor(i / 3) * 118
-    const scelto = i === cv.sel
+  voci.slice(pagina * PER_PAGINA_CATALOGO, (pagina + 1) * PER_PAGINA_CATALOGO).forEach((v, i) => {
+    const x = 14 + (i % FORME) * 206
+    const y = 62 + Math.floor(i / FORME) * 118
+    const scelto = pagina * PER_PAGINA_CATALOGO + i === cv.sel
     const d = SPECIE[v.sp]!
     // catturato: crema con la sfera; visto: a colori su fondo chiaro; mai visto: solo ? e ?????
     const fondo = v.preso ? '#fbf5e4' : v.visto ? '#ebe7f3' : '#d0ccdc'
@@ -1130,10 +1290,12 @@ export function svgCatalogo(s: Stato): string {
       `<rect x="${x}" y="${y}" width="198" height="110" rx="8" fill="${scelto ? '#ffd84c' : '#5a5680'}" shape-rendering="auto"/>` +
       `<rect x="${x + 4}" y="${y + 4}" width="190" height="102" rx="5" fill="${fondo}" shape-rendering="auto"/>` +
       `<ellipse cx="${x + 46}" cy="${y + 92}" rx="32" ry="6" fill="${scuro(fondo, 0.15)}"/>` +
-      (v.visto ? mostroIn({ sp: v.sp }, x + 46, y + 94, 2) : svgTela(domanda, x + 31, y + 46, 5)) +
-      scritta(x + 92, y + 28, '#' + String(v.numero).padStart(2, '0'), 15, '#6c6880') +
-      scritta(x + 92, y + 52, v.visto ? d.nome : SCONOSCIUTO, 17, v.visto ? NERO : '#6c6880') +
+      (v.visto ? mostroIn({ sp: v.sp, evo: v.st }, x + 46, y + 94, 2) : svgTela(domanda, x + 31, y + 46, 5)) +
+      scritta(x + 92, y + 28, numeroVoce(v), 15, '#6c6880') +
+      scritta(x + 92, y + 52, v.visto ? nomeForma(v.sp, v.st) : SCONOSCIUTO, 17, v.visto ? NERO : '#6c6880') +
       (v.visto && !v.preso ? scritta(x + 186, y + 100, 'visto', 13, '#6c6880', 'end') : '')
+    // la freccia verso la forma dopo, tra una scheda e l'altra
+    if (v.st < FORME - 1) corpo += `<path fill="#c8c4e0" d="M${x + 200} ${y + 49}l5 6l-5 6z"/>`
     if (v.visto) {
       corpo +=
         `<rect x="${x + 92}" y="${y + 62}" width="84" height="22" rx="5" fill="${COLORE_TIPO[d.tipo] ?? '#888'}" shape-rendering="auto"/>` +
@@ -1142,17 +1304,18 @@ export function svgCatalogo(s: Stato): string {
     if (v.preso) corpo += sfera8(x + 166, y + 14, 2)
     if (v.raro && v.visto) corpo += scritta(x + 92, y + 100, 'raro', 13, '#b8862c')
   })
-  // Tutti i 45: rossi i catturati, lilla i visti, scuri quelli mai visti; sotto la pagina aperta una riga d'oro.
+  // Tutte le forme: rosse le catturate, lilla le viste, scure quelle mai viste; sotto il mondo aperto una riga d'oro.
   const tutte = MONDI.map((_, m) => vociCatalogo(s, m))
   const visti = tutte.flat().filter(v => v.visto && !v.preso).length
-  corpo += scritta(14, 434, `Tutti i ${tutte.flat().length} · presi ${s.catalogo.length} · visti ${visti}`, 14, '#c8c4e0')
+  corpo += scritta(14, 434, `Tutte le ${tutte.flat().length} forme · prese ${s.catalogo.length} · viste ${visti}`, 14, '#c8c4e0')
   tutte.forEach((voci, m) => {
     const x0 = 50 + m * 118
-    if (m === cv.mondo) corpo += `<rect x="${x0}" y="456" width="106" height="3" fill="#ffd84c"/>`
-    voci.forEach((v, i) => {
-      const x = x0 + i * 12
-      if (m === cv.mondo && i === cv.sel) corpo += `<rect x="${x - 2}" y="440" width="14" height="14" fill="#ffffff"/>`
-      corpo += `<rect x="${x}" y="442" width="10" height="10" fill="${v.preso ? '#e8483c' : v.visto ? '#b8b0e0' : '#4a4668'}"/>`
+    if (m === cv.mondo) corpo += `<rect x="${x0}" y="458" width="106" height="3" fill="#ffd84c"/>`
+    voci.forEach((v, k) => {
+      const x = x0 + Math.floor(k / FORME) * 12
+      const y = 440 + v.st * 5
+      if (m === cv.mondo && k === cv.sel) corpo += `<rect x="${x - 1}" y="${y - 1}" width="12" height="6" fill="#ffffff"/>`
+      corpo += `<rect x="${x}" y="${y}" width="10" height="4" fill="${v.preso ? '#e8483c' : v.visto ? '#b8b0e0' : '#4a4668'}"/>`
     })
   })
 
@@ -1168,6 +1331,7 @@ export function svgPer(s0: Stato): { source: string; alt: string } {
     return { source: svgLotta(s), alt: `Lotta contro ${nome(s.nemico)}` }
   }
   if (s.catalogoVista) return { source: svgCatalogo(s), alt: `Catalogo dei Mostrini: ${MONDI[s.catalogoVista.mondo]?.nome ?? ''}` }
+  if (s.inPalestra) return { source: svgPalestra(s), alt: `Palestra ${MONDI[s.mondo]!.del}` }
 
   return { source: svgMappa(s), alt: 'Mappa del mondo dei Mostrini' }
 }

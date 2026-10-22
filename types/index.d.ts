@@ -44,6 +44,8 @@ export type Stato = {
   palestre?: number[]
   // le evoluzioni appena avvenute, da mostrare una alla volta con l'animazione (da e a sono gli stadi)
   evoluzioni?: { sp: string; da: number; a: number }[]
+  // le schermate di festa da mostrare: tutte le medaglie vinte, il catalogo completo
+  feste?: ('medaglie' | 'catalogo')[]
   // dentro la palestra (entrando dalla G): la posizione nel salone; fuori x e y restano davanti alla G
   inPalestra?: { x: number; y: number } | null
   // le partite delle versioni precedenti: sfere e cure erano numeri, con mega sfere e super cure a parte

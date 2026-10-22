@@ -1248,6 +1248,88 @@ export function svgEvoluzione(e: { sp: string; da: number; a: number }): string 
   return svg(640, 400, corpo)
 }
 
+// ---------- Feste ----------
+
+// Coriandoli che cadono dall'alto senza fine, ognuno col suo ritmo.
+function coriandoli(): string {
+  const r = seme(77)
+  const colori = ['#ffd84c', '#e8483c', '#4c9cff', '#6fd36f', '#c46cd9', '#ffffff']
+
+  return Array.from({ length: 46 }, (_, i) => {
+    const x = Math.floor(r() * 630)
+    const dur = (2.4 + r() * 2).toFixed(2)
+    const inizio = (r() * 3).toFixed(2)
+
+    return (
+      `<rect x="${x}" y="-12" width="${4 + Math.floor(r() * 4)}" height="${7 + Math.floor(r() * 5)}" fill="${colori[i % colori.length]}">` +
+      `<animate attributeName="y" from="-12" to="410" begin="${inizio}s" dur="${dur}s" repeatCount="indefinite"/></rect>`
+    )
+  }).join('')
+}
+
+// Il fondo delle feste: notte stellata con una luce dorata al centro.
+const fondoFesta = (titolo: string, sotto: string) =>
+  `<rect width="640" height="400" fill="#2c2a48"/>` +
+  `<ellipse cx="320" cy="210" rx="290" ry="190" fill="#3c3864"/>` +
+  `<ellipse cx="320" cy="210" rx="190" ry="130" fill="#4a4678"/>` +
+  `<g>${scritta(320, 64, titolo, 40, '#ffd84c', 'middle', NERO)}` +
+  `<animateTransform attributeName="transform" type="translate" values="0 0;0 -6;0 0" dur="1.2s" repeatCount="indefinite"/></g>` +
+  scritta(320, 100, sotto, 18, '#ffffff', 'middle', NERO)
+
+// Tutte le medaglie: le cinque medaglie compaiono una alla volta, sotto la tua squadra.
+export function svgFestaMedaglie(s: Stato): string {
+  const medaglie = MONDI.map((m, i) => {
+    const x = 128 + i * 96
+    const colore = COLORE_TIPO[m.palestra.tipo] ?? '#888888'
+
+    return (
+      `<g opacity="0">` +
+      `<path fill="${scuro(colore, 0.2)}" d="M${x - 12} 128h10l4 26h-10zM${x + 2} 128h10l-4 26h-10z"/>` +
+      `<ellipse cx="${x}" cy="176" rx="28" ry="28" fill="#c88a1c" shape-rendering="auto"/>` +
+      `<ellipse cx="${x}" cy="176" rx="23" ry="23" fill="#ffd84c" shape-rendering="auto"/>` +
+      `<ellipse cx="${x}" cy="176" rx="14" ry="14" fill="${colore}" shape-rendering="auto"/>` +
+      `<ellipse cx="${x - 7}" cy="168" rx="4" ry="4" fill="#fff3b0" shape-rendering="auto"/>` +
+      scritta(x, 224, m.palestra.medaglia.replace('Medaglia ', ''), 13, '#ffffff', 'middle', NERO) +
+      `<set attributeName="opacity" to="1" begin="${(0.3 + i * 0.35).toFixed(2)}s" fill="freeze"/></g>`
+    )
+  }).join('')
+  const squadra = s.squadra
+    .slice(0, 3)
+    .map((m, i) => {
+      const x = 320 + (i - (Math.min(3, s.squadra.length) - 1) / 2) * 140
+
+      return `<ellipse cx="${x}" cy="378" rx="50" ry="10" fill="#6c6898"/>` + mostroIn(m, x, 378, 3)
+    })
+    .join('')
+  const corpo = fondoFesta('CAMPIONE DI MOSTRINI!', `Hai vinto tutte e ${MONDI.length} le medaglie delle palestre`) + medaglie + squadra + coriandoli()
+
+  return svg(640, 400, corpo)
+}
+
+// Il catalogo completo: i rari dei cinque mondi nella forma finale, che saltellano a turno.
+export function svgFestaCatalogo(s: Stato): string {
+  const rari = MONDI.map((m, i) => {
+    const x = 96 + i * 112
+
+    return (
+      `<ellipse cx="${x}" cy="306" rx="46" ry="9" fill="#6c6898"/>` +
+      `<g>${mostroIn({ sp: m.raro, evo: FORME - 1 }, x, 304, 2)}` +
+      `<animateTransform attributeName="transform" type="translate" values="0 0;0 -14;0 0" begin="${(i * 0.2).toFixed(1)}s" dur="1s" repeatCount="indefinite"/></g>`
+    )
+  }).join('')
+  const tot = Object.keys(SPECIE).length * FORME
+  const corpo =
+    fondoFesta('CATALOGO COMPLETO!', `Hai catturato tutte le ${tot} forme dei Mostrini`) +
+    rari +
+    `<rect x="210" y="330" width="220" height="44" rx="8" fill="${NERO}" shape-rendering="auto"/>` +
+    `<rect x="214" y="334" width="212" height="36" rx="6" fill="#fffbe8" shape-rendering="auto"/>` +
+    sfera8(226, 340, 3) +
+    scritta(340, 360, `${s.catalogo.length}/${tot}`, 24, NERO, 'middle') +
+    coriandoli()
+
+  return svg(640, 400, corpo)
+}
+
 // ---------- Menu, scelta iniziale e catalogo ----------
 
 // Il paesaggio del menu e della scelta iniziale: il cielo arriva fino al prato, così tra le colline
@@ -1375,6 +1457,9 @@ export function svgPer(s0: Stato): { source: string; alt: string; animato?: bool
   if (evo) {
     return { source: svgEvoluzione(evo), alt: `${nomeForma(evo.sp, evo.da)} si evolve in ${nomeForma(evo.sp, evo.a)}`, animato: true }
   }
+  const festa = s.feste?.[0]
+  if (festa === 'medaglie') return { source: svgFestaMedaglie(s), alt: 'Campione di Mostrini: tutte le medaglie', animato: true }
+  if (festa === 'catalogo') return { source: svgFestaCatalogo(s), alt: 'Catalogo completo', animato: true }
   if (s.modo === 'menu') return { source: svgMenu(), alt: 'Mostrini: menu principale' }
   if (s.modo === 'inizio') return { source: svgInizio(), alt: 'Scegli il tuo primo Mostrino' }
   if (s.modo === 'lotta' && s.nemico && s.squadra[0]) {

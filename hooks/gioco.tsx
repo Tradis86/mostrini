@@ -445,6 +445,7 @@ export function normalizza(salvato: Partial<Stato>): Stato {
     daCancellare: null,
     catalogoVista: null,
     evoluzioni: [],
+    feste: [],
     sfere: caselle(salvato.sfere, salvato.megaSfere, 5),
     cure: caselle(salvato.cure, salvato.cureForti, 2),
     megaSfere: undefined,
@@ -1189,10 +1190,29 @@ const PASSI: Record<string, [number, number]> = {
   up: [0, -1], w: [0, -1], down: [0, 1], s: [0, 1], left: [-1, 0], a: [-1, 0], right: [1, 0], d: [1, 0],
 }
 
+// I due traguardi del gioco: tutte le medaglie delle palestre, tutte le forme nel catalogo.
+export const tutteLeMedaglie = (s: Stato) => MONDI.every((_, i) => medaglia(s, i))
+export const catalogoCompleto = (s: Stato) => Object.keys(SPECIE).every(sp => Array.from({ length: FORME }, (_, st) => forma(sp, st)).every(k => s.catalogo.includes(k)))
+
+// Quando un tasto fa raggiungere un traguardo, parte la sua schermata di festa.
+export function festeggia(prima: Stato, dopo: Stato): Stato {
+  const nuove = [
+    ...(!tutteLeMedaglie(prima) && tutteLeMedaglie(dopo) ? (['medaglie'] as const) : []),
+    ...(!catalogoCompleto(prima) && catalogoCompleto(dopo) ? (['catalogo'] as const) : []),
+  ]
+
+  return nuove.length > 0 ? { ...dopo, feste: [...(dopo.feste ?? []), ...nuove] } : dopo
+}
+
 export function tasto(s: Stato, k: ClientKeyEvent): Stato {
+  return festeggia(s, tastoGioco(s, k))
+}
+
+function tastoGioco(s: Stato, k: ClientKeyEvent): Stato {
   const key = k.key.toLowerCase()
-  // Mentre si guarda un'evoluzione, un tasto qualsiasi passa alla prossima (o torna al gioco).
+  // Mentre si guarda un'evoluzione o una festa, un tasto qualsiasi passa alla prossima (o torna al gioco).
   if (s.evoluzioni && s.evoluzioni.length > 0) return { ...s, evoluzioni: s.evoluzioni.slice(1) }
+  if (s.feste && s.feste.length > 0) return { ...s, feste: s.feste.slice(1) }
   if (s.modo === 'inizio') {
     const i = ['1', '2', '3'].indexOf(key)
 
@@ -1449,6 +1469,36 @@ const Gioco: ClientModule<any, Stato> = (props: Props, surface) => {
           {evo.a === 2 && <Text mono color={COL.io}>È la sua forma finale!</Text>}
         </Box>
         <Text mono dimColor>Premi un tasto per continuare{s.evoluzioni!.length > 1 ? ` (altre evoluzioni: ${s.evoluzioni!.length - 1})` : ''}</Text>
+      </Box>
+    )
+  }
+
+  // Le feste: tutte le medaglie, il catalogo completo. Nell'app desktop c'è l'animazione, qui il racconto.
+  const festa = !evo ? s.feste?.[0] : undefined
+  if (festa) {
+    return (
+      <Box flexDirection="column">
+        {testa}
+        <Box flexDirection="column" marginTop={1}>
+          {!grafica && <Text mono color={COL.io}>  ✦ · ✧ · ✦ · ✧ · ✦ · ✧ · ✦</Text>}
+          {festa === 'medaglie' ? (
+            <Box flexDirection="column">
+              <Text mono bold color={COL.io}>CAMPIONE DI MOSTRINI!</Text>
+              <Text mono>Hai vinto tutte e {MONDI.length} le medaglie:</Text>
+              {MONDI.map((m, i) => (
+                <Text mono key={'m' + i} color={COLORE_TIPO[m.palestra.tipo]}>  ◉ {m.palestra.medaglia} · {m.palestra.capo} · {m.nome}</Text>
+              ))}
+            </Box>
+          ) : (
+            <Box flexDirection="column">
+              <Text mono bold color={COL.io}>CATALOGO COMPLETO!</Text>
+              <Text mono>Hai catturato tutte le {Object.keys(SPECIE).length * FORME} forme di tutti i {Object.keys(SPECIE).length} Mostrini.</Text>
+              <Text mono>I rari dei cinque mondi: {MONDI.map(m => nomeForma(m.raro, FORME - 1)).join(', ')}.</Text>
+            </Box>
+          )}
+          {!grafica && <Text mono color={COL.io}>  ✦ · ✧ · ✦ · ✧ · ✦ · ✧ · ✦</Text>}
+        </Box>
+        <Text mono dimColor>Premi un tasto per continuare</Text>
       </Box>
     )
   }

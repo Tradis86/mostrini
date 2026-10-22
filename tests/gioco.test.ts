@@ -4,6 +4,7 @@ import {
   MAPPA, MONDI, SPECIE, SFERE, CURE, SFERE_MAX, CURE_MAX, VERSIONE, bioma, livelloNel, evolve, nome, maxHp, stadio, vociCatalogo, descrizione,
   articoli, probCattura, allievi, vinteIn, medaglia, squadraCapo, contiCatalogo, numeroVoce, FORME,
   muoviInPalestra, casellaSalone, postoSfidante, saloneLargo, TAPPETO, ANELLO, fortiContro, deboliContro, BIO,
+  festeggia, tutteLeMedaglie, catalogoCompleto,
 } from '../hooks/gioco.tsx'
 import type { Stato } from '../hooks/gioco.tsx'
 import { DISEGNI, svgPer } from '../hooks/grafica.ts'
@@ -390,6 +391,36 @@ test('il catalogo ha una voce per ogni forma: 27 per mondo, 135 in tutto', () =>
   // mentre il catalogo è aperto non ci si muove, e L lo chiude
   expect(tasto(s, { key: 'up' }).x).toBe(s.x)
   expect(tasto(s, { key: 'l' }).catalogoVista).toBeNull()
+})
+
+test('le feste: tutte le medaglie e il catalogo completo', () => {
+  const tutte = Object.keys(SPECIE).flatMap(sp => [sp, `${sp}:1`, `${sp}:2`])
+  const s = scegliIniziale(statoIniziale(), 0)
+  const medaglieTutte = MONDI.map((_, i) => allievi(i) + 1)
+  expect(tutteLeMedaglie({ ...s, palestre: medaglieTutte })).toBe(true)
+  expect(catalogoCompleto({ ...s, catalogo: tutte })).toBe(true)
+  expect(catalogoCompleto({ ...s, catalogo: tutte.slice(1) })).toBe(false)
+  // la festa parte solo quando il traguardo si raggiunge, non dopo
+  const prima = { ...s, palestre: medaglieTutte.map((v, i) => (i === 4 ? v - 1 : v)), catalogo: tutte.slice(1) }
+  const dopo = festeggia(prima, { ...prima, palestre: medaglieTutte, catalogo: tutte })
+  expect(dopo.feste).toEqual(['medaglie', 'catalogo'])
+  expect(festeggia(dopo, dopo).feste).toEqual(['medaglie', 'catalogo'])
+  // ognuna ha la sua schermata animata, nel limite del pannello; un tasto passa alla prossima
+  const medaglie = svgPer(dopo)
+  expect(medaglie.animato).toBe(true)
+  expect(medaglie.source).toContain('CAMPIONE DI MOSTRINI!')
+  expect(medaglie.source.length).toBeLessThan(131072)
+  const secondo = tasto(dopo, { key: 'x' })
+  expect(secondo.feste).toEqual(['catalogo'])
+  expect(svgPer(secondo).source).toContain('CATALOGO COMPLETO!')
+  expect(svgPer(secondo).source.length).toBeLessThan(131072)
+  expect(tasto(secondo, { key: 'x' }).feste).toEqual([])
+  // battere l'ultimo capopalestra con le altre medaglie già vinte fa partire la festa
+  let ultimo = { ...prima, mondo: 4, squadra: [{ sp: 'braciotto', lvl: 80, xp: 0, hp: 9999 }], inPalestra: { x: postoSfidante(allievi(4)) - 2, y: TAPPETO } }
+  ultimo = tasto(ultimo, { key: 'right' })
+  expect(ultimo.allenatore?.palestra).toBe('capo')
+  while (ultimo.modo === 'lotta') ultimo = tasto({ ...ultimo, nemico: { ...ultimo.nemico!, hp: 1 }, scelta: 0 }, { key: '1' })
+  expect(ultimo.feste).toContain('medaglie')
 })
 
 test('il menu mostra la versione', () => {

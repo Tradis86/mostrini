@@ -21,6 +21,7 @@ Mostrini è un mini gioco di creature da catturare che si apre in un pannello de
   - Deserto Rovente: Capopalestra Ambra (terra), Medaglia Duna
   - Palude Nebbiosa: Capopalestra Ortica (veleno), Medaglia Miasma
   - Rovine Spettrali: Capopalestra Corvino (spettro), Medaglia Eclisse: chi la vince è il campione di Mostrini
+- **Feste:** quando vinci la quinta medaglia parte la schermata del **Campione di Mostrini** (le cinque medaglie che compaiono una alla volta, la tua squadra e i coriandoli); quando catturi l'ultima forma parte quella del **Catalogo completo** (i rari dei cinque mondi nella forma finale che saltellano, e 135/135). Un tasto qualsiasi torna al gioco.
 - **Portali:** la medaglia della palestra apre il portale viola (`P`) verso il mondo dopo. Il portale verde acqua (`R`) riporta al mondo prima.
 - **Livelli legati al mondo:** i Mostrini selvatici e gli allenatori hanno i livelli del mondo in cui ti trovi, non quelli della tua squadra. Gli allenatori stanno nella metà alta della fascia.
 - **Bioma:** ogni mondo potenzia del 5% le mosse di due tipi e indebolisce del 5% quelle di altri due. In lotta, accanto a ogni mossa, vedi i suoi bonus e malus: il tipo contro l'avversario (`tipo +10%` o `tipo -5%`) e il bioma (`bioma +5%` o `bioma -5%`). Sotto la mappa trovi il bioma del mondo.

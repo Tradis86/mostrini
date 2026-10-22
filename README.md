@@ -38,7 +38,22 @@ Mostrini è un mini gioco di creature da catturare che si apre in un pannello de
 - **Allenatori:** ogni tanto, nell'erba alta o sul sentiero, un allenatore ti sfida con la sua squadra (2 Mostrini nella Prateria, 3 negli altri mondi). Non puoi catturare i suoi Mostrini né scappare; se li batti tutti vinci un premio in monete.
 - **In lotta**, sotto il tuo riquadro, una sfera per ogni Mostrino della tua squadra (grigia se è esausto). Una piccola sfera accanto al nome dell'avversario ti dice che quella specie l'hai già catturata (non basta averla sconfitta). Contro un allenatore vedi anche quanti Mostrini gli restano. Con `5` dai il cambio a un altro Mostrino della squadra: ti costa il turno.
 - **Squadra e box:** una squadra può avere fino a **3 Mostrini**: quelli che catturi in più finiscono nel **box**. Con `B` apri il box: premi il numero del Mostrino che vuoi far entrare e poi il numero di quello della squadra che deve uscire. Nel box, `R` passa a **rilascia**: il numero che premi libera quel Mostrino (resta comunque nel catalogo). `B` o `0` chiude il box.
-- **Lotte a turni veloci** con vantaggi di tipo: fuoco batte erba e ghiaccio, erba batte acqua, roccia e terra, acqua batte fuoco, roccia e terra, roccia batte fuoco, ghiaccio ed elettro, ghiaccio batte erba e terra, terra batte fuoco, elettro, roccia e veleno, veleno batte erba, spettro batte spettro e veleno
+- **Lotte a turni veloci** con gli elementi: un attacco del tipo avvantaggiato fa il **10% in più**, quello del tipo svantaggiato il **5% in meno**. I 10 tipi sono in cerchio e ognuno batte il successivo e quello tre posti più avanti, così sono tutti in equilibrio: ognuno è forte contro 2 tipi e debole contro 2.
+
+  | Tipo | Forte contro (+10%) | Debole contro (-5%) |
+  | --- | --- | --- |
+  | acqua | fuoco, roccia | spettro, normale |
+  | fuoco | erba, ghiaccio | acqua, elettro |
+  | erba | roccia, terra | fuoco, normale |
+  | roccia | ghiaccio, veleno | erba, acqua |
+  | ghiaccio | terra, spettro | roccia, fuoco |
+  | terra | veleno, elettro | ghiaccio, erba |
+  | veleno | spettro, normale | terra, roccia |
+  | spettro | elettro, acqua | veleno, ghiaccio |
+  | elettro | normale, fuoco | spettro, terra |
+  | normale | acqua, erba | elettro, veleno |
+
+  Nel catalogo ogni Mostrino visto ha una **bio** e il suo tipo, con contro chi è forte e contro chi è debole.
 - **Livelli ed esperienza per tutta la squadra:** chi lotta prende tutta l'esperienza, gli altri Mostrini in forma la metà
 - **Monete:** ogni lotta vinta ti dà monete (il doppio del livello del Mostrino sconfitto), più il premio quando batti un allenatore
 - **Negozio al Centro cure** (tasto `M` quando ci sei sopra): `1` per le sfere, `2` per le cure, poi il numero per comprare (`0` torna indietro). Non ti blocca: appena ti muovi il negozio si chiude. Ogni mondo aggiunge una sfera e una cura più forti di quelle prima:

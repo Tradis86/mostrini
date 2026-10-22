@@ -85,34 +85,73 @@ const COLORE_TIPO: Record<Tipo, string> = {
   spettro: '#9c8cf0',
 }
 
+// Gli elementi sono disposti in cerchio, e ognuno batte quello subito dopo e quello tre posti più avanti:
+// così ogni tipo è forte contro due tipi e debole contro due, e allo stesso modo prende più danni da due
+// tipi e meno da altri due. Nessun tipo vale più degli altri.
+export const ANELLO: Tipo[] = ['acqua', 'fuoco', 'erba', 'roccia', 'ghiaccio', 'terra', 'veleno', 'spettro', 'elettro', 'normale']
+// L'attacco del tipo forte fa il 10% in più, quello del tipo debole il 5% in meno.
+export const VANTAGGIO = 1.1
+export const SVANTAGGIO = 0.95
+
 export function efficacia(att: Tipo, dif: Tipo): number {
-  const forte: Record<string, Tipo[]> = {
-    fuoco: ['erba', 'ghiaccio'],
-    acqua: ['fuoco', 'roccia', 'terra'],
-    erba: ['acqua', 'roccia', 'terra'],
-    elettro: ['acqua'],
-    ghiaccio: ['erba', 'terra'],
-    roccia: ['fuoco', 'ghiaccio', 'elettro'],
-    terra: ['fuoco', 'elettro', 'roccia', 'veleno'],
-    veleno: ['erba'],
-    spettro: ['spettro', 'veleno'],
-  }
-  const debole: Record<string, Tipo[]> = {
-    fuoco: ['acqua', 'fuoco', 'roccia'],
-    acqua: ['erba', 'acqua'],
-    erba: ['fuoco', 'erba', 'veleno'],
-    elettro: ['erba', 'elettro', 'roccia', 'terra'],
-    ghiaccio: ['fuoco', 'ghiaccio', 'roccia'],
-    roccia: ['roccia'],
-    normale: ['spettro'],
-    terra: ['erba', 'terra'],
-    veleno: ['veleno', 'terra', 'roccia', 'spettro'],
-    spettro: ['normale', 'roccia'],
-  }
-  if (forte[att]?.includes(dif)) return 1.5
-  if (debole[att]?.includes(dif)) return 0.6
+  const passi = (ANELLO.indexOf(dif) - ANELLO.indexOf(att) + ANELLO.length) % ANELLO.length
+  if (passi === 1 || passi === 3) return VANTAGGIO
+  if (passi === ANELLO.length - 1 || passi === ANELLO.length - 3) return SVANTAGGIO
 
   return 1
+}
+
+// Contro chi è forte un tipo, e contro chi è debole.
+export const fortiContro = (t: Tipo) => ANELLO.filter(d => efficacia(t, d) > 1)
+export const deboliContro = (t: Tipo) => ANELLO.filter(d => efficacia(t, d) < 1)
+
+// Le bio del catalogo, una per specie.
+export const BIO: Record<string, string> = {
+  braciotto: 'Ha una fiammella sulla testa che si gonfia quando è contento.',
+  fumarello: 'Sbuffa nuvolette di fumo quando sonnecchia al sole.',
+  goccetto: 'Una goccia curiosa che rimbalza da una pozzanghera all\'altra.',
+  ondina: 'Cavalca le piccole onde dei laghetti della Prateria.',
+  germoglio: 'Il germoglio sulla testa cresce un po\' ogni volta che prende il sole.',
+  muschietto: 'Dorme così tanto che gli cresce il muschio addosso.',
+  zampetto: 'Corre nell\'erba alta a zampe leggere e non si fa mai sentire.',
+  piumino: 'Ha una piuma sola, ma ne va fierissimo.',
+  scintillo: 'Raro e scattante: quando si emoziona lascia scintille nell\'aria.',
+  gelino: 'Le sue antenne di ghiaccio tintinnano col vento delle vette.',
+  nevischio: 'Si confonde con la neve fresca e sbadiglia fiocchi.',
+  sassolo: 'Rotola giù dai pendii per divertimento.',
+  macigno: 'Pesante e paziente: può restare fermo per giorni.',
+  lavotto: 'Porta il calore della lava anche in mezzo alla neve.',
+  brinella: 'Lascia una scia di brina dovunque nuoti.',
+  licheno: 'Cresce sulle rocce più fredde e non teme il gelo.',
+  yetino: 'Un batuffolo di pelo bianco che adora le valanghe.',
+  tuonello: 'Raro: il suo grido rimbomba tra le vette come un tuono.',
+  sabbiotto: 'Si nasconde sotto la sabbia lasciando fuori solo gli occhi.',
+  dunetto: 'Si sposta col vento insieme alle dune.',
+  cactello: 'Fiorisce una volta all\'anno, e allora diventa gentilissimo.',
+  pungiglio: 'Agita la coda velenosa per spaventare, ma è un tenerone.',
+  solletto: 'Si ricarica al sole di mezzogiorno e scotta al tatto.',
+  cammellino: 'Fa scorta d\'acqua nelle gobbe per attraversare il deserto.',
+  oasina: 'Dove si ferma spuntano palme e acqua fresca.',
+  pietrolo: 'Le sue punte di roccia indicano sempre la strada per l\'oasi.',
+  mummietto: 'Raro: si dice che custodisca i segreti delle piramidi.',
+  melmino: 'È fatto di melma lilla e gocciola dappertutto.',
+  fanghetto: 'Adora i bagni di fango e ne esce sempre più forte.',
+  rospetto: 'Gracida di notte e salta da una ninfea all\'altra.',
+  tossilla: 'Il suo cappello a pois è bello da vedere, ma meglio non toccarlo.',
+  ninfeo: 'Galleggia sulle acque ferme con un fiore rosa in testa.',
+  zanzarello: 'Ronza intorno a chi attraversa la palude.',
+  lucciolo: 'Di notte illumina la palude con la pancia luminosa.',
+  nebbietta: 'Appare e scompare nella nebbia del mattino.',
+  draghetto: 'Raro: un piccolo drago che sputa bolle velenose.',
+  fantasmino: 'Si diverte a fare "bu!" a chi passa, poi scappa.',
+  lumicino: 'Una fiammella blu che danza tra le rovine.',
+  ossicino: 'Rosicchia ossa antiche e ne porta una in testa.',
+  pipistrillo: 'Dorme a testa in giù sotto gli archi delle rovine.',
+  gargolino: 'Di giorno sembra una statua, di notte fa la guardia.',
+  ombretta: 'Vive nelle ombre e ha occhi rosa che brillano al buio.',
+  corvetto: 'Colleziona gli oggetti luccicanti che trova tra le rovine.',
+  brividino: 'Fa venire i brividi a chiunque gli passi vicino.',
+  eclissino: 'Raro: compare solo quando la luna si nasconde.',
 }
 
 // Ogni casella occupa due caratteri a schermo.
@@ -674,8 +713,8 @@ function danno(a: Mostrino, d: Mostrino, potenza: number, tipo: Tipo, mondo: num
 }
 
 function nota(eff: number) {
-  if (eff > 1) return ' È superefficace!'
-  if (eff < 1) return ' Non è molto efficace.'
+  if (eff > 1) return ' Tipo avvantaggiato: +10%!'
+  if (eff < 1) return ' Tipo svantaggiato: -5%.'
 
   return ''
 }
@@ -1033,8 +1072,10 @@ export function descrizione(v: Voce): string {
   const dove = MONDI[d.mondo]!
   const chi = nomeForma(v.sp, v.st)
   if (!v.visto) return `${num} ${SCONOSCIUTO}: non l'hai ancora incontrato. Vive ${dove.nel}.`
+  // la bio e il tipo, con contro chi è forte (+10%) e contro chi è debole (-5%)
+  const bio = ` ${BIO[v.sp] ?? ''} Tipo ${d.tipo}: forte contro ${fortiContro(d.tipo).join(' e ')}, debole contro ${deboliContro(d.tipo).join(' e ')}.`
   if (!v.preso) {
-    return `${num} ${chi} (${d.tipo}): l'hai visto ma non ancora catturato. Vive ${dove.nel}${v.raro ? ' ed è raro' : ''}.`
+    return `${num} ${chi} (${d.tipo}): l'hai visto ma non ancora catturato. Vive ${dove.nel}${v.raro ? ' ed è raro' : ''}.${bio}`
   }
   const linea =
     v.st === 0
@@ -1043,7 +1084,7 @@ export function descrizione(v: Voce): string {
         ? `è l'evoluzione di ${d.nome}, e al Lv ${LIVELLI_EVO[1]} diventa ${d.evo[1]}`
         : `è la forma finale di ${d.nome}`
 
-  return `${num} ${chi} (${d.tipo})${v.raro ? ', raro' : ''}: ${linea}.`
+  return `${num} ${chi} (${d.tipo})${v.raro ? ', raro' : ''}: ${linea}.${bio}`
 }
 
 // Frecce: sinistra e destra scorrono le forme (e passano al mondo vicino), su e giù di una riga;

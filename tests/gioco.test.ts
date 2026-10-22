@@ -3,7 +3,7 @@ import {
   statoIniziale, scegliIniziale, muovi, azione, efficacia, apriScambio, normalizza, portaleAperto, specieDel, catalogoDel, usaCura, tasto, cambiaInLotta, compra, rilascia, sfida, lancia, tastoMenu, statoMenu, CENTRO,
   MAPPA, MONDI, SPECIE, SFERE, CURE, SFERE_MAX, CURE_MAX, VERSIONE, bioma, livelloNel, evolve, nome, maxHp, stadio, vociCatalogo, descrizione,
   articoli, probCattura, allievi, vinteIn, medaglia, squadraCapo, contiCatalogo, numeroVoce, FORME,
-  muoviInPalestra, casellaSalone, postoSfidante, saloneLargo, TAPPETO,
+  muoviInPalestra, casellaSalone, postoSfidante, saloneLargo, TAPPETO, ANELLO, fortiContro, deboliContro, BIO,
 } from '../hooks/gioco.tsx'
 import type { Stato } from '../hooks/gioco.tsx'
 import { DISEGNI, svgPer } from '../hooks/grafica.ts'
@@ -404,11 +404,25 @@ test('ogni disegno sta nel limite del pannello', () => {
   }
 })
 
-test('i tipi si battono a vicenda in cerchio', () => {
-  expect(efficacia('fuoco', 'erba')).toBe(1.5)
-  expect(efficacia('erba', 'acqua')).toBe(1.5)
-  expect(efficacia('acqua', 'fuoco')).toBe(1.5)
-  expect(efficacia('fuoco', 'acqua')).toBe(0.6)
+test('i tipi si battono a vicenda in cerchio, tutti in equilibrio', () => {
+  // acqua batte fuoco: +10% per l'acqua, -5% per il fuoco che attacca l'acqua
+  expect(efficacia('acqua', 'fuoco')).toBe(1.1)
+  expect(efficacia('fuoco', 'acqua')).toBe(0.95)
+  expect(efficacia('fuoco', 'erba')).toBe(1.1)
+  expect(efficacia('fuoco', 'fuoco')).toBe(1)
+  // ogni tipo: forte contro 2 e debole contro 2 quando attacca, e lo stesso quando difende
+  for (const t of ANELLO) {
+    expect(fortiContro(t).length).toBe(2)
+    expect(deboliContro(t).length).toBe(2)
+    expect(ANELLO.filter(a => efficacia(a, t) > 1).length).toBe(2)
+    expect(ANELLO.filter(a => efficacia(a, t) < 1).length).toBe(2)
+    // se A batte B, allora B attaccando A è svantaggiato
+    for (const d of fortiContro(t)) expect(efficacia(d, t)).toBe(0.95)
+  }
+  // ogni specie ha la sua bio, e la scheda del catalogo mostra il tipo
+  for (const sp of Object.keys(SPECIE)) expect(BIO[sp]?.length).toBeGreaterThan(10)
+  const s = { ...scegliIniziale(statoIniziale(), 0) }
+  expect(descrizione(vociCatalogo(s, 0)[0]!)).toContain('Tipo fuoco: forte contro')
 })
 
 test('scelta, incontro nell erba, cattura', () => {

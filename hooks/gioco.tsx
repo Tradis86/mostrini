@@ -899,27 +899,28 @@ function tastoScambio(s: Stato, key: string): Stato {
   return scambia(s, sc.entra, n - 1)
 }
 
-// L apre il catalogo: una pagina per mondo con i suoi 9 Mostrini, presi o ancora da trovare.
+// L apre il catalogo: tutti i 45 Mostrini, una pagina da 9 per mondo, presi o ancora da trovare.
 export function apriCatalogo(s: Stato): Stato {
   return { ...s, catalogoVista: { mondo: s.mondo, sel: 0 } }
 }
 
-// Un mondo è sbloccato quando ci sei arrivato o il suo portale è aperto: dei suoi Mostrini mancanti
-// si vede il nome; nei mondi ancora chiusi restano ???.
-export const mondoSbloccato = (s: Stato, mondo: number) => mondo <= s.mondo || portaleAperto(s, mondo - 1)
+// preso: catturato, con la sfera; visto: incontrato o sconfitto, a colori ma senza sfera.
+// Uno né visto né catturato è solo un ? con ????? al posto del nome.
+export type Voce = { sp: string; numero: number; preso: boolean; visto: boolean; raro: boolean }
 
-// preso: catturato, con la sfera; visto: incontrato o sconfitto, a colori ma senza sfera;
-// noto: se ne vede almeno il nome.
-export type Voce = { sp: string; numero: number; preso: boolean; visto: boolean; noto: boolean; raro: boolean }
+export const SCONOSCIUTO = '?????'
+
+// Tutti i 45 a colpo d'occhio, mondo per mondo: ◓ catturato, ○ visto, ? mai visto.
+export const panoramica = (s: Stato) =>
+  MONDI.map((_, mondo) => vociCatalogo(s, mondo).map(v => (v.preso ? '◓' : v.visto ? '○' : '?')).join(''))
 
 export function vociCatalogo(s: Stato, mondo: number): Voce[] {
   const tutte = Object.keys(SPECIE)
 
   return specieDel(mondo).map(sp => {
     const preso = s.catalogo.includes(sp)
-    const visto = preso || !!s.visti?.includes(sp)
 
-    return { sp, numero: tutte.indexOf(sp) + 1, preso, visto, noto: visto || mondoSbloccato(s, mondo), raro: MONDI[mondo]!.raro === sp }
+    return { sp, numero: tutte.indexOf(sp) + 1, preso, visto: preso || !!s.visti?.includes(sp), raro: MONDI[mondo]!.raro === sp }
   })
 }
 
@@ -928,12 +929,9 @@ export function descrizione(v: Voce): string {
   const d = SPECIE[v.sp]!
   const num = '#' + String(v.numero).padStart(2, '0')
   const dove = MONDI[d.mondo]!
-  if (!v.noto) return `${num} ???: vive ${dove.nel}, che non hai ancora aperto.`
-  if (v.visto && !v.preso) {
-    return `${num} ${d.nome} (${d.tipo}): l'hai visto ma non ancora catturato. Vive ${dove.nel}${v.raro ? ' ed è raro' : ''}.`
-  }
+  if (!v.visto) return `${num} ${SCONOSCIUTO}: non l'hai ancora incontrato. Vive ${dove.nel}.`
   if (!v.preso) {
-    return `${num} ${d.nome} (${d.tipo}): manca! Vive ${dove.nel}${v.raro ? ' ed è raro' : ''}. Catturalo per registrarlo.`
+    return `${num} ${d.nome} (${d.tipo}): l'hai visto ma non ancora catturato. Vive ${dove.nel}${v.raro ? ' ed è raro' : ''}.`
   }
 
   return `${num} ${d.nome} (${d.tipo})${v.raro ? ', raro' : ''}: si evolve in ${d.evo[0]} al Lv ${LIVELLI_EVO[0]} e in ${d.evo[1]} al Lv ${LIVELLI_EVO[1]}.`
@@ -1386,9 +1384,9 @@ const Gioco: ClientModule<any, Stato> = (props: Props, surface) => {
           <Box flexDirection="column" marginTop={1}>
             {voci.map((v, i) => (
               <Text mono key={'k' + i} inverse={i === cv.sel} dimColor={!v.preso}>
-                {' '}{v.preso ? '◓' : v.visto ? '○' : '·'} #{String(v.numero).padStart(2, '0')} {v.noto ? SPECIE[v.sp]!.nome : '???'}
-                {v.noto && <Text mono color={COLORE_TIPO[SPECIE[v.sp]!.tipo]}> {SPECIE[v.sp]!.tipo}</Text>}
-                {v.preso ? '' : v.visto ? ' · visto' : ' · manca'}{v.raro && v.noto ? ' · raro' : ''}{' '}
+                {' '}{v.preso ? '◓' : v.visto ? '○' : '?'} #{String(v.numero).padStart(2, '0')} {v.visto ? SPECIE[v.sp]!.nome : SCONOSCIUTO}
+                {v.visto && <Text mono color={COLORE_TIPO[SPECIE[v.sp]!.tipo]}> {SPECIE[v.sp]!.tipo}</Text>}
+                {v.preso || !v.visto ? '' : ' · visto'}{v.raro && v.visto ? ' · raro' : ''}{' '}
               </Text>
             ))}
           </Box>
@@ -1397,6 +1395,14 @@ const Gioco: ClientModule<any, Stato> = (props: Props, surface) => {
           <Box marginTop={1}>
             <Text mono wrap="wrap">{descrizione(scelta)}</Text>
           </Box>
+        )}
+        {!grafica && (
+          <Text mono>
+            Tutti i {Object.keys(SPECIE).length}:{' '}
+            {panoramica(s).map((riga, i) => (
+              <Text mono key={'t' + i} bold={i === cv.mondo} dimColor={i !== cv.mondo}>{riga}{i < MONDI.length - 1 ? ' ' : ''}</Text>
+            ))}
+          </Text>
         )}
         <Text mono dimColor>Frecce scegli · 1-{MONDI.length} cambia mondo · L o 0 chiude il catalogo</Text>
       </Box>

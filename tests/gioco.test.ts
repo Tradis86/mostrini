@@ -2,7 +2,7 @@ import { test, expect } from 'claude-code/testing'
 import {
   statoIniziale, scegliIniziale, muovi, azione, efficacia, apriScambio, normalizza, portaleAperto, specieDel, catalogoDel, usaCura, tasto, cambiaInLotta, compra, rilascia, sfida, lancia, tastoMenu, statoMenu, CENTRO,
   MAPPA, MONDI, SPECIE, SFERE, CURE, SFERE_MAX, CURE_MAX, VERSIONE, bioma, livelloNel, evolve, nome, maxHp, stadio, vociCatalogo, descrizione,
-  articoli, probCattura, allievi, vinteIn, medaglia, squadraCapo,
+  articoli, probCattura, allievi, vinteIn, medaglia, squadraCapo, panoramica,
 } from '../hooks/gioco.tsx'
 import type { Stato } from '../hooks/gioco.tsx'
 import { DISEGNI, svgPer } from '../hooks/grafica.ts'
@@ -311,13 +311,16 @@ test('il catalogo mostra chi hai preso, chi hai visto e chi manca, mondo per mon
   expect(voci.length).toBe(9)
   expect(voci.filter(v => v.preso).map(v => v.sp)).toEqual(['braciotto', 'zampetto'])
   expect(voci.filter(v => v.visto && !v.preso).map(v => v.sp)).toEqual(['piumino'])
-  // nella Prateria i mancanti hanno il nome; nel Deserto, ancora chiuso, restano ???
-  expect(voci.every(v => v.noto)).toBe(true)
-  expect(vociCatalogo(s, 2).some(v => v.noto)).toBe(false)
+  // chi non è né visto né catturato è solo un ? con ????? al posto del nome, in ogni mondo
+  expect(voci.filter(v => !v.visto).length).toBe(6)
   expect(descrizione(voci[0]!)).toContain('Bracione')
-  expect(descrizione(voci[2]!)).toContain('manca')
+  expect(descrizione(voci[2]!)).toContain('?????')
+  expect(descrizione(voci[2]!)).not.toContain('Goccetto')
   expect(descrizione(voci.find(v => v.sp === 'piumino')!)).toContain('visto')
-  expect(descrizione(vociCatalogo(s, 2)[0]!)).toContain('???')
+  expect(descrizione(vociCatalogo(s, 2)[0]!)).toContain('?????')
+  // ci sono tutti i 45: ◓ catturati, ○ visti, ? mai visti
+  expect(panoramica(s).join('').length).toBe(Object.keys(SPECIE).length)
+  expect(panoramica(s)[0]).toBe('◓?????◓○?')
   // frecce: destra scorre, giù salta una riga, oltre l'ultimo si passa al mondo dopo
   s = tasto(s, { key: 'right' })
   expect(s.catalogoVista?.sel).toBe(1)

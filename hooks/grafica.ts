@@ -1,5 +1,5 @@
 import type { Mostrino, Stato } from '../types'
-import { SPECIE, MONDI, INIZIALI, maxHp, casellaDi, nome, stadio, vociCatalogo, VERSIONE, COLORE_SFERA } from './gioco.tsx'
+import { SPECIE, MONDI, INIZIALI, maxHp, casellaDi, nome, stadio, vociCatalogo, VERSIONE, COLORE_SFERA, SCONOSCIUTO } from './gioco.tsx'
 
 // Pixel art per l'app desktop, a risoluzione doppia. Ogni disegno nasce su una tela di pixel e
 // diventa un SVG con un solo path per colore: il pannello accetta SVG fino a 131072 caratteri.
@@ -453,14 +453,11 @@ const ALA = [
   '........A.aa',
 ]
 
-const SAGOMA = '#463e58'
-
 const cacheMostri = new Map<string, Tela>()
 
-// sagoma: il Mostrino tutto scuro, per quelli che mancano nel catalogo.
-function mostrino(m: { sp: string; evo?: number | boolean }, sagoma = false): Tela {
+function mostrino(m: { sp: string; evo?: number | boolean }): Tela {
   const st = Math.min(2, Number(m.evo ?? 0))
-  const chiave = `${m.sp}:${st}:${sagoma}`
+  const chiave = `${m.sp}:${st}`
   const pronto = cacheMostri.get(chiave)
   if (pronto) return pronto
   const d = DISEGNI[m.sp] ?? DISEGNI.zampetto!
@@ -520,7 +517,6 @@ function mostrino(m: { sp: string; evo?: number | boolean }, sagoma = false): Te
     const sopra = ingombro(t).y
     lettere(t, CORONA, { z: '#ffd84c', Z: '#e8a81c', g: '#ff4c6c' }, cx - 7, sopra - CORONA.length + 1)
   }
-  if (sagoma) t.px = t.px.map(c => (c ? SAGOMA : null))
   contorno(t)
   cacheMostri.set(chiave, t)
 
@@ -528,12 +524,12 @@ function mostrino(m: { sp: string; evo?: number | boolean }, sagoma = false): Te
 }
 
 // Un Mostrino in un punto del disegno: (x, y) è l'angolo in alto a sinistra della sua tela.
-const mostro = (m: { sp: string; evo?: number | boolean }, x: number, y: number, p: number, specchio = false, sagoma = false) =>
-  svgTela(mostrino(m, sagoma), x, y, p, specchio)
+const mostro = (m: { sp: string; evo?: number | boolean }, x: number, y: number, p: number, specchio = false) =>
+  svgTela(mostrino(m), x, y, p, specchio)
 
 // Il Mostrino ritagliato e centrato in un riquadro (catalogo, scelta iniziale).
-function mostroIn(m: { sp: string; evo?: number | boolean }, cx: number, piedi: number, p: number, sagoma = false) {
-  const t = mostrino(m, sagoma)
+function mostroIn(m: { sp: string; evo?: number | boolean }, cx: number, piedi: number, p: number) {
+  const t = mostrino(m)
   const b = ingombro(t)
 
   return svgTela(t, Math.round(cx - (b.x + b.w / 2) * p), Math.round(piedi - (b.y + b.h) * p), p, false)
@@ -1053,16 +1049,21 @@ export function svgLotta(s: Stato): string {
 
 // ---------- Menu, scelta iniziale e catalogo ----------
 
+// Il paesaggio del menu e della scelta iniziale: il cielo arriva fino al prato, così tra le colline
+// non resta vuoto, e una collina lontana riempie la valle in mezzo.
 function prato(alto: number): string {
   const t = tela(320, alto)
   const sc = SCENE[0]!
-  sc.cielo.forEach((c, i) => rett(t, 0, Math.round((i * alto * 0.6) / 4), 320, Math.ceil((alto * 0.6) / 4) + 1, c))
+  const orizzonte = Math.round(alto * 0.7)
+  const fascia = orizzonte / sc.cielo.length
+  sc.cielo.forEach((c, i) => rett(t, 0, Math.round(i * fascia), 320, Math.round((i + 1) * fascia) - Math.round(i * fascia), c))
   nuvola(t, 50, 20, 1)
   nuvola(t, 270, 14, 0.8)
+  ellisse(t, 160, alto * 0.72, 90, 16, '#b4e4a0')
   ellisse(t, 60, alto * 0.66, 90, 20, '#9fd88a')
   ellisse(t, 260, alto * 0.68, 100, 22, '#8ccf78')
-  rett(t, 0, Math.round(alto * 0.7), 320, alto, sc.prato)
-  rett(t, 0, Math.round(alto * 0.7), 320, 2, chiaro(sc.prato, 0.2))
+  rett(t, 0, orizzonte, 320, alto - orizzonte, sc.prato)
+  rett(t, 0, orizzonte, 320, 2, chiaro(sc.prato, 0.2))
   for (const cx of [75, 160, 245]) pedana(t, cx, alto - 14, 34, 6, sc)
 
   return svgTela(t, 0, 0, 2)
@@ -1098,13 +1099,19 @@ const COLORE_TIPO: Record<string, string> = {
   ghiaccio: '#4cb4d8', roccia: '#9a7a52', terra: '#b8863c', veleno: '#9c4cc8', spettro: '#6c5cc8',
 }
 
-// Il catalogo: una pagina per mondo, nove schede con il Mostrino, il numero, il nome e il tipo.
+// Il punto di domanda dei Mostrini mai visti.
+const DOMANDA = ['.kkkk.', 'kk..kk', '....kk', '...kk.', '..kk..', '..kk..', '......', '..kk..']
+
+// Il catalogo: una pagina per mondo, nove schede con il Mostrino, il numero, il nome e il tipo;
+// in fondo tutti i 45 in fila, mondo per mondo.
 export function svgCatalogo(s: Stato): string {
   const cv = s.catalogoVista ?? { mondo: s.mondo, sel: 0 }
   const voci = vociCatalogo(s, cv.mondo)
   const presi = voci.filter(v => v.preso).length
+  const domanda = tela(6, 8)
+  lettere(domanda, DOMANDA, { k: '#8a86a0' }, 0, 0)
   let corpo =
-    `<rect width="640" height="420" fill="#2c2a48"/>` +
+    `<rect width="640" height="462" fill="#2c2a48"/>` +
     `<rect width="640" height="52" fill="#423e6c"/>` +
     scritta(20, 34, `Catalogo · ${MONDI[cv.mondo]!.nome}`, 22, '#ffffff') +
     scritta(470, 34, `${presi}/${voci.length}`, 22, presi === voci.length ? '#ffd84c' : '#ffffff', 'end') +
@@ -1117,26 +1124,39 @@ export function svgCatalogo(s: Stato): string {
     const y = 62 + Math.floor(i / 3) * 118
     const scelto = i === cv.sel
     const d = SPECIE[v.sp]!
-    // catturato: crema con la sfera; visto: a colori su fondo chiaro; mancante: ombra; mondo chiuso: ???
-    const fondo = v.preso ? '#fbf5e4' : v.visto ? '#ebe7f3' : v.noto ? '#d8d4e4' : '#a8a4bc'
+    // catturato: crema con la sfera; visto: a colori su fondo chiaro; mai visto: solo ? e ?????
+    const fondo = v.preso ? '#fbf5e4' : v.visto ? '#ebe7f3' : '#d0ccdc'
     corpo +=
       `<rect x="${x}" y="${y}" width="198" height="110" rx="8" fill="${scelto ? '#ffd84c' : '#5a5680'}" shape-rendering="auto"/>` +
       `<rect x="${x + 4}" y="${y + 4}" width="190" height="102" rx="5" fill="${fondo}" shape-rendering="auto"/>` +
       `<ellipse cx="${x + 46}" cy="${y + 92}" rx="32" ry="6" fill="${scuro(fondo, 0.15)}"/>` +
-      mostroIn({ sp: v.sp }, x + 46, y + 94, 2, !v.visto) +
+      (v.visto ? mostroIn({ sp: v.sp }, x + 46, y + 94, 2) : svgTela(domanda, x + 31, y + 46, 5)) +
       scritta(x + 92, y + 28, '#' + String(v.numero).padStart(2, '0'), 15, '#6c6880') +
-      scritta(x + 92, y + 52, v.noto ? d.nome : '???', 17, v.visto ? NERO : '#4a4660') +
+      scritta(x + 92, y + 52, v.visto ? d.nome : SCONOSCIUTO, 17, v.visto ? NERO : '#6c6880') +
       (v.visto && !v.preso ? scritta(x + 186, y + 100, 'visto', 13, '#6c6880', 'end') : '')
-    if (v.noto) {
+    if (v.visto) {
       corpo +=
         `<rect x="${x + 92}" y="${y + 62}" width="84" height="22" rx="5" fill="${COLORE_TIPO[d.tipo] ?? '#888'}" shape-rendering="auto"/>` +
         scritta(x + 134, y + 78, d.tipo, 14, '#ffffff', 'middle')
     }
     if (v.preso) corpo += sfera8(x + 166, y + 14, 2)
-    if (v.raro && v.noto) corpo += scritta(x + 92, y + 100, 'raro', 13, '#b8862c')
+    if (v.raro && v.visto) corpo += scritta(x + 92, y + 100, 'raro', 13, '#b8862c')
+  })
+  // Tutti i 45: rossi i catturati, lilla i visti, scuri quelli mai visti; sotto la pagina aperta una riga d'oro.
+  const tutte = MONDI.map((_, m) => vociCatalogo(s, m))
+  const visti = tutte.flat().filter(v => v.visto && !v.preso).length
+  corpo += scritta(14, 434, `Tutti i ${tutte.flat().length} · presi ${s.catalogo.length} · visti ${visti}`, 14, '#c8c4e0')
+  tutte.forEach((voci, m) => {
+    const x0 = 50 + m * 118
+    if (m === cv.mondo) corpo += `<rect x="${x0}" y="456" width="106" height="3" fill="#ffd84c"/>`
+    voci.forEach((v, i) => {
+      const x = x0 + i * 12
+      if (m === cv.mondo && i === cv.sel) corpo += `<rect x="${x - 2}" y="440" width="14" height="14" fill="#ffffff"/>`
+      corpo += `<rect x="${x}" y="442" width="10" height="10" fill="${v.preso ? '#e8483c' : v.visto ? '#b8b0e0' : '#4a4668'}"/>`
+    })
   })
 
-  return svg(640, 420, corpo)
+  return svg(640, 462, corpo)
 }
 
 export function svgPer(s0: Stato): { source: string; alt: string } {

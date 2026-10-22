@@ -1430,8 +1430,18 @@ const Gioco: ClientModule<any, Stato> = (props: Props, surface) => {
     const bi = barra(io)
     const dn = SPECIE[nem.sp]
     const di = SPECIE[io.sp]
-    // ▲ o ▼: la mossa è potenziata o indebolita del 5% dal bioma del mondo.
-    const segno = (t: Tipo) => (bioma(s.mondo, t) > 1 ? ' ▲5%' : bioma(s.mondo, t) < 1 ? ' ▼5%' : '')
+    // Accanto a ogni mossa i suoi bonus e malus: il tipo contro l'avversario (+10% o -5%)
+    // e il bioma del mondo (+5% o -5%).
+    const segno = (t: Tipo) => {
+      const tipo = efficacia(t, dn.tipo)
+      const b = bioma(s.mondo, t)
+      const parti = [
+        tipo > 1 ? `tipo +10%` : tipo < 1 ? `tipo -5%` : '',
+        b > 1 ? 'bioma +5%' : b < 1 ? 'bioma -5%' : '',
+      ].filter(Boolean)
+
+      return parti.length > 0 ? ` (${parti.join(', ')})` : ''
+    }
     const voci = [
       'Botta' + segno('normale'),
       MOSSA[di.tipo] + segno(di.tipo),

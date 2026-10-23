@@ -1,7 +1,9 @@
 import type { Mostrino, Stato } from '../types'
+import type { Rarita } from './gioco.tsx'
 import {
   SPECIE, MONDI, INIZIALI, maxHp, casellaDi, nome, stadio, vociCatalogo, VERSIONE, COLORE_SFERA, SCONOSCIUTO,
-  FORME, PER_PAGINA_CATALOGO, paginaCatalogo, nomeForma, numeroVoce, saloneLargo, SALONE_ALTO, TAPPETO, casellaSalone,
+  COLORE_RARITA, rarita, raroDel, formaDi,
+  FORME, PER_PAGINA_CATALOGO, paginaCatalogo, nomeForma, numeroVoce, BIO, fortiContro, deboliContro, LIVELLI_EVO, saloneLargo, SALONE_ALTO, TAPPETO, casellaSalone,
 } from './gioco.tsx'
 
 // Pixel art per l'app desktop, a risoluzione doppia. Ogni disegno nasce su una tela di pixel e
@@ -264,6 +266,62 @@ export const DISEGNI: Record<string, Disegno> = {
     cappello: ['....yyy.....', '...yy.......', '...yy.......', '....yyy.....'],
     occhi: 'stelle',
     colori: { b: '#3c2c6c', l: '#8c7cc8', y: '#ffe68c' },
+  },
+  stillino: {
+    cappello: ['............', '.....ww.....', '....wbbw....', '.....bb.....'],
+    occhi: 'sonno',
+    colori: { b: '#6c9cc8', l: '#dcecff', w: '#ffffff' },
+  },
+  // Gli epici e i leggendari dei cinque mondi
+  trifoglio: {
+    cappello: ['..rr....rr..', '.rrrr..rrrr.', '.rrrrttrrrr.', '..rr.tt.rr..'],
+    occhi: 'felici',
+    colori: { b: '#b4e070', l: '#f2fcd8', r: '#1f9a48', t: '#146a30' },
+  },
+  carpadoro: {
+    cappello: ['.....rr.....', '....rrrr....', '...rryyrr...', '..rr.rr.rr..'],
+    occhi: 'tondi',
+    colori: { b: '#f2c230', l: '#fff6cc', r: '#ff8a3c', y: '#fff3b0' },
+  },
+  cristallino: {
+    cappello: ['.....rr.....', '....rwwr....', '.r..rwwr..r.', 'rwr.rrrr.rwr'],
+    occhi: 'stelle',
+    colori: { b: '#bfe6ff', l: '#f4fcff', r: '#5cb4f0', w: '#ffffff', y: '#3c8ce0' },
+  },
+  aurorino: {
+    cappello: ['..r..gg..r..', '.rr.gggg.rr.', '..r..gg..r..', '............'],
+    occhi: 'stelle',
+    colori: { b: '#5c4cc8', l: '#c8bcff', r: '#4cf0b0', g: '#ff7ad0', y: '#ffd84c' },
+  },
+  scarabello: {
+    cappello: ['.....rr.....', '....rr......', '....rrr.....', '...rrrrr....'],
+    occhi: 'tondi',
+    colori: { b: '#3c9e8c', l: '#c8f0e0', r: '#ffcc3c' },
+  },
+  fenicino: {
+    cappello: ['.r..y..y..r.', '.rr.yrry.rr.', '..ryyrryyr..', '...rryyrr...'],
+    occhi: 'stelle',
+    colori: { b: '#ff6c3c', l: '#ffe0a0', r: '#ff2c1c', y: '#ffd84c' },
+  },
+  anguillo: {
+    cappello: ['............', '..r.r.r.r...', '..rrrrrrrr..', '............'],
+    occhi: 'tondi',
+    colori: { b: '#4c8cc8', l: '#c8e4ff', r: '#ffd84c' },
+  },
+  basiliscolo: {
+    cappello: ['..y.y..y.y..', '..yryyyyry..', '...rrrrrr...', '............'],
+    occhi: 'stelle',
+    colori: { b: '#5c8c3c', l: '#d0e8a0', r: '#9c3cc8', y: '#ffd84c' },
+  },
+  golemino: {
+    cappello: ['............', '..rr.rr.rr..', '..rrrrrrrr..', '...r.rr.r...'],
+    occhi: 'tondi',
+    colori: { b: '#a09888', l: '#d8d0c0', r: '#6c8c5c' },
+  },
+  chimerino: {
+    cappello: ['..k......k..', '..kr.rr.rk..', '.rrrrrrrrrr.', '..rrrrrrrr..'],
+    occhi: 'stelle',
+    colori: { b: '#e89c3c', l: '#ffe0b0', r: '#c84c2c', y: '#ff4c4c' },
   },
 }
 
@@ -883,6 +941,19 @@ export function svgMappa(s: Stato): string {
   )
   corpo += `<ellipse cx="${s.x * T + 16}" cy="${s.y * T + 29}" rx="8" ry="2.5" fill="${NERO}" opacity="0.3"/>`
   corpo += svgTela(giocatore(), s.x * T + 7, s.y * T + 9, 1)
+  // la canna da pesca e il galleggiante bianco e rosso, con i cerchi nell'acqua
+  if (s.pesca) {
+    const bx = s.pesca.x * T + 16
+    const by = s.pesca.y * T + 18
+    const mx = s.x * T + 16 + Math.sign(bx - s.x * T - 16) * 12
+    const my = s.y * T + 6
+    corpo +=
+      `<path stroke="#7a5230" stroke-width="2" d="M${s.x * T + 18} ${s.y * T + 20}L${mx} ${my}"/>` +
+      `<path stroke="#f4f0e6" stroke-width="1" fill="none" d="M${mx} ${my}L${bx} ${by - 3}"/>` +
+      `<ellipse cx="${bx}" cy="${by + 2}" rx="9" ry="3" fill="none" stroke="#dcf2ff" stroke-width="1" opacity="0.8"/>` +
+      `<rect x="${bx - 3}" y="${by - 4}" width="6" height="4" fill="#e8483c"/>` +
+      `<rect x="${bx - 3}" y="${by}" width="6" height="3" fill="#ffffff"/>`
+  }
 
   return svg(mappa[0]!.length * T, mappa.length * T, corpo)
 }
@@ -1163,10 +1234,14 @@ function riquadro(m: Mostrino, x: number, y: number, w: number, mio: boolean, pr
   const colore = r > 0.5 ? '#4fc35a' : r > 0.2 ? '#f2c230' : '#e8483c'
   const h = mio ? 100 : 74
   const bw = w - 92
+  // i nomi lunghi un po' più piccoli, per lasciare posto alle gemme e al livello
+  const dim = nome(m).length > 10 ? 19 : 22
   let out =
     pannello(x, y, w, h) +
     (preso ? sfera8(x + 14, y + 14, 2) : '') +
-    scritta(x + (preso ? 36 : 16), y + 30, nome(m), 22) +
+    scritta(x + (preso ? 36 : 16), y + 30, nome(m), dim) +
+    // la rarità dopo il nome: una gemma azzurra il raro, due viola l'epico, tre d'oro il leggendario
+    gemme(x + (preso ? 36 : 16) + Math.ceil(nome(m).length * dim * 0.6) + 8, y + 14, rarita(m.sp)) +
     scritta(x + w - 16, y + 30, `Lv${m.lvl}`, 18, NERO, 'end') +
     `<rect x="${x + 16}" y="${y + 40}" width="44" height="20" rx="4" fill="#c06a1a" shape-rendering="auto"/>` +
     scritta(x + 38, y + 55, 'PS', 15, '#fff6e0', 'middle') +
@@ -1179,18 +1254,227 @@ function riquadro(m: Mostrino, x: number, y: number, w: number, mio: boolean, pr
   return out
 }
 
+const GEMME: Record<Rarita, number> = { comune: 0, raro: 1, epico: 2, leggendario: 3 }
+
+function gemme(x: number, y: number, r: Rarita): string {
+  return Array.from({ length: GEMME[r] }, (_, i) => {
+    const gx = x + i * 14
+
+    return (
+      `<path fill="${COLORE_RARITA[r]}" stroke="${NERO}" stroke-width="2" d="M${gx + 6} ${y}L${gx + 12} ${y + 7}L${gx + 6} ${y + 14}L${gx} ${y + 7}Z"/>` +
+      `<path fill="#ffffff" d="M${gx + 5} ${y + 4}h2v3h-2z"/>`
+    )
+  }).join('')
+}
+
+// ---------- I colpi in lotta ----------
+
+// Chi attacca si muove (la Botta è uno scatto in avanti, le mosse un salto con slancio), chi è colpito
+// trema e lampeggia, e sopra di lui compare l'effetto della mossa: fiamme, schizzi d'acqua, foglie,
+// fulmini, schegge di ghiaccio, massi, polvere, bolle velenose, spettri, raffiche di vento.
+// La Botta è uguale per tutti: un grande SBAM!. I due colpi del turno partono uno dopo l'altro.
+type Colpo = NonNullable<Stato['colpi']>[number]
+
+// Il centro del corpo dei due Mostrini in lotta, e quanto è grande l'effetto su di loro.
+const POSTI = { nemico: { cx: 470, cy: 140, k: 1 }, io: { cx: 170, cy: 290, k: 1.3 } }
+const DURATA_COLPO = 1.3
+const impatto = (c: Colpo) => (c.mossa === 'botta' ? 0.25 : 0.45)
+
+const fra = (t: number) => t.toFixed(2)
+
+function slancio(c: Colpo, t: number): string {
+  const v = c.chi === 'io' ? 1 : -1
+  const valori =
+    c.mossa === 'botta'
+      ? `0 0;${-8 * v} ${5 * v};${48 * v} ${-28 * v};0 0`
+      : `0 0;0 10;${16 * v} -34;${26 * v} ${-14 * v};0 0`
+
+  return (
+    `<animateTransform attributeName="transform" type="translate" values="${valori}" ` +
+    `keyTimes="${c.mossa === 'botta' ? '0;0.3;0.6;1' : '0;0.2;0.5;0.75;1'}" begin="${fra(t)}s" dur="${c.mossa === 'botta' ? 0.45 : 0.65}s"/>`
+  )
+}
+
+function scossa(t: number): string {
+  return (
+    `<animateTransform attributeName="transform" type="translate" values="0 0;-10 0;10 0;-7 0;7 0;-3 0;0 0" begin="${fra(t)}s" dur="0.5s"/>` +
+    `<animate attributeName="opacity" values="1;0.2;1;0.2;1;0.4;1" begin="${fra(t)}s" dur="0.6s"/>`
+  )
+}
+
+// Un pezzo dell'effetto che si sposta di (dx, dy) e intanto si accende e si spegne.
+const vola = (dx: number, dy: number, t: number, d: number) =>
+  `<animateTransform attributeName="transform" type="translate" values="0 0;${Math.round(dx)} ${Math.round(dy)}" begin="${fra(t)}s" dur="${d}s" fill="freeze"/>` +
+  `<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.7;1" begin="${fra(t)}s" dur="${d}s" fill="freeze"/>`
+
+// Un pezzo che si gonfia (raggio da 0 a r) e svanisce.
+const gonfia = (r: number, t: number, d: number, ry = r, picco = 0.75) =>
+  `<animate attributeName="rx" values="0;${r}" begin="${fra(t)}s" dur="${d}s" fill="freeze"/>` +
+  `<animate attributeName="ry" values="0;${ry}" begin="${fra(t)}s" dur="${d}s" fill="freeze"/>` +
+  `<animate attributeName="opacity" values="0;${picco};0" begin="${fra(t)}s" dur="${d}s" fill="freeze"/>`
+
+const angoli = (n: number, da = 0) => Array.from({ length: n }, (_, i) => da + (i * Math.PI * 2) / n)
+
+function effetto(mossa: Colpo['mossa'], p: { cx: number; cy: number; k: number }, t: number): string {
+  const { cx, cy, k } = p
+  const X = (d: number) => Math.round(cx + d * k)
+  const Y = (d: number) => Math.round(cy + d * k)
+  let pezzi = ''
+  if (mossa === 'botta') {
+    const punte = angoli(12).map((a, i) => `${Math.round(Math.cos(a) * (i % 2 ? 26 : 50) * k)} ${Math.round(Math.sin(a) * (i % 2 ? 26 : 50) * k)}`)
+    const raggi = angoli(8, 0.2)
+      .map(a => `<path stroke="#ffffff" stroke-width="5" d="M${X(Math.cos(a) * 54)} ${Y(Math.sin(a) * 54)}L${X(Math.cos(a) * 80)} ${Y(Math.sin(a) * 80)}"/>`)
+      .join('')
+    pezzi =
+      `<g opacity="0">${raggi}<animate attributeName="opacity" values="0;1;0" begin="${fra(t)}s" dur="0.5s"/></g>` +
+      `<g transform="translate(${cx} ${cy})"><g>` +
+      `<path fill="#ffd84c" stroke="${NERO}" stroke-width="5" stroke-linejoin="round" d="M${punte.join('L')}Z"/>` +
+      `<path fill="#ff5a3c" d="M${punte.map(q => q.split(' ').map(n => Math.round(Number(n) * 0.6)).join(' ')).join('L')}Z"/>` +
+      scritta(0, Math.round(10 * k), 'SBAM!', Math.round(26 * k), '#ffffff', 'middle', NERO) +
+      `<animateTransform attributeName="transform" type="scale" values="0.2;1.25;1" keyTimes="0;0.4;1" begin="${fra(t)}s" dur="0.3s" fill="freeze"/>` +
+      `</g></g>`
+
+    return `<g opacity="0">${pezzi}<set attributeName="opacity" to="1" begin="${fra(t)}s" dur="0.8s"/></g>`
+  }
+  if (mossa === 'fuoco') {
+    pezzi = [[-40, 34], [-20, 40], [0, 30], [20, 40], [40, 34], [-30, 8], [30, 8], [0, 4], [-12, -20], [14, -18]]
+      .map(([dx, dy], i) => {
+        const x = X(dx!)
+        const y = Y(dy!)
+        const h = Math.round((20 + (i % 3) * 6) * k)
+
+        return (
+          `<g opacity="0"><path fill="#ff6a1a" d="M${x} ${y - h}L${x + 11} ${y}L${x + 6} ${y + 9}L${x - 6} ${y + 9}L${x - 11} ${y}Z"/>` +
+          `<path fill="#ffd84c" d="M${x} ${y - Math.round(h / 2)}L${x + 5} ${y + 2}L${x} ${y + 7}L${x - 5} ${y + 2}Z"/>${vola(0, -26 * k, t + i * 0.04, 0.7)}</g>`
+        )
+      })
+      .join('')
+  } else if (mossa === 'acqua') {
+    pezzi =
+      angoli(12)
+        .map((a, i) => `<g opacity="0"><ellipse cx="${cx}" cy="${cy}" rx="${Math.round(7 * k)}" ry="${Math.round(9 * k)}" fill="${i % 2 ? '#4cb4ff' : '#9fdcff'}"/>${vola(Math.cos(a) * 80 * k, Math.sin(a) * 56 * k - 10, t, 0.7)}</g>`)
+        .join('') +
+      [0, 0.18].map(d => `<ellipse cx="${cx}" cy="${Y(30)}" rx="0" ry="0" fill="none" stroke="#bfe6ff" stroke-width="6">${gonfia(Math.round(90 * k), t + d, 0.6, Math.round(34 * k))}</ellipse>`).join('') +
+      [-30, 0, 30].map((dx, i) => `<g opacity="0"><ellipse cx="${X(dx)}" cy="${Y(-120)}" rx="${Math.round(8 * k)}" ry="${Math.round(12 * k)}" fill="#3c8ce0"/>${vola(0, 110 * k, t - 0.25 + i * 0.06, 0.35)}</g>`).join('')
+  } else if (mossa === 'erba') {
+    const foglie = angoli(8)
+      .map((a, i) => {
+        const x = X(Math.cos(a) * 62)
+        const y = Y(Math.sin(a) * 46)
+
+        return `<ellipse cx="${x}" cy="${y}" rx="${Math.round(11 * k)}" ry="${Math.round(5 * k)}" fill="${i % 2 ? '#3fa84a' : '#7fd36b'}" stroke="#1f6a2c" stroke-width="2" transform="rotate(${Math.round((a * 180) / Math.PI) + 90} ${x} ${y})"/>`
+      })
+      .join('')
+    pezzi = `<g opacity="0">${foglie}<animateTransform attributeName="transform" type="rotate" values="0 ${cx} ${cy};300 ${cx} ${cy}" begin="${fra(t)}s" dur="0.8s" fill="freeze"/><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.8;1" begin="${fra(t)}s" dur="0.8s" fill="freeze"/></g>`
+  } else if (mossa === 'elettro') {
+    const fulmine = (ox: number) => {
+      const punti = [[ox, -130], [ox + 18, -90], [ox - 6, -70], [ox + 20, -30], [ox * 0.2, 0]].map(([dx, dy]) => `${X(dx!)} ${Y(dy!)}`).join('L')
+
+      return `<path fill="none" stroke="#ffd84c" stroke-width="${Math.round(9 * k)}" stroke-linejoin="round" d="M${punti}"/><path fill="none" stroke="#ffffff" stroke-width="${Math.round(3 * k)}" d="M${punti}"/>`
+    }
+    pezzi =
+      `<g opacity="0">${fulmine(-40)}${fulmine(0)}${fulmine(40)}<animate attributeName="opacity" values="0;1;0;1;0;1;0" begin="${fra(t)}s" dur="0.7s" fill="freeze"/></g>` +
+      `<ellipse cx="${cx}" cy="${cy}" rx="0" ry="0" fill="#fff6a0">${gonfia(Math.round(70 * k), t, 0.5, Math.round(60 * k), 0.55)}</ellipse>`
+  } else if (mossa === 'ghiaccio') {
+    pezzi =
+      angoli(8, 0.4)
+        .map(a => {
+          const x = X(Math.cos(a) * 96)
+          const y = Y(Math.sin(a) * 70)
+          const r = Math.round(9 * k)
+
+          return `<g opacity="0"><path fill="#bfe6ff" stroke="#4cb4d8" stroke-width="2" d="M${x} ${y - r * 2}L${x + r} ${y}L${x} ${y + r * 2}L${x - r} ${y}Z"/><path fill="#ffffff" d="M${x - 1} ${y - r}h3v${r}h-3z"/>${vola(-Math.cos(a) * 76 * k, -Math.sin(a) * 54 * k, t, 0.55)}</g>`
+        })
+        .join('') +
+      `<g opacity="0"><rect x="${X(-50)}" y="${Y(-56)}" width="${Math.round(100 * k)}" height="${Math.round(108 * k)}" rx="8" fill="#cfefff" opacity="0.55" stroke="#ffffff" stroke-width="3"/><set attributeName="opacity" to="1" begin="${fra(t + 0.45)}s" dur="0.35s"/></g>`
+  } else if (mossa === 'roccia') {
+    pezzi = [[-36, 20], [0, 30], [34, 18], [-16, -6], [20, -10]]
+      .map(([dx, dy], i) => {
+        const x = X(dx!)
+        const y = Y(dy! - 150)
+        const r = Math.round((13 + (i % 2) * 5) * k)
+
+        return `<g opacity="0"><path fill="#9a8a70" stroke="${NERO}" stroke-width="3" d="M${x - r} ${y}L${x - r / 2} ${y - r}L${x + r / 2} ${y - r}L${x + r} ${y}L${x + r / 2} ${y + r}L${x - r / 2} ${y + r}Z"/><path fill="#c8b89a" d="M${x - r / 2} ${y - r + 3}h${r / 2}v${r / 2}h-${r / 2}z"/>${vola(0, 150 * k, t - 0.2 + i * 0.07, 0.45)}</g>`
+      })
+      .join('')
+  } else if (mossa === 'terra') {
+    pezzi =
+      [[-40, 40], [-14, 46], [14, 46], [40, 40], [0, 30], [-26, 20], [26, 20]]
+        .map(([dx, dy], i) => `<ellipse cx="${X(dx!)}" cy="${Y(dy!)}" rx="0" ry="0" fill="${i % 2 ? '#c89850' : '#e0b870'}">${gonfia(Math.round(30 * k), t + i * 0.05, 0.7, Math.round(20 * k))}</ellipse>`)
+        .join('') +
+      angoli(6, 0.3)
+        .map(a => `<g opacity="0"><rect x="${cx}" y="${Y(40)}" width="${Math.round(6 * k)}" height="${Math.round(6 * k)}" fill="#7a5a30"/>${vola(Math.cos(a) * 70 * k, -60 * k - Math.abs(Math.sin(a)) * 30, t, 0.6)}</g>`)
+        .join('')
+  } else if (mossa === 'veleno') {
+    pezzi =
+      `<ellipse cx="${cx}" cy="${Y(10)}" rx="0" ry="0" fill="#9c4cc8">${gonfia(Math.round(70 * k), t, 0.8, Math.round(50 * k), 0.45)}</ellipse>` +
+      [[-40, 40], [-20, 30], [0, 44], [20, 30], [40, 40], [-30, 10], [30, 10], [-8, 20], [10, 0], [0, -10]]
+        .map(([dx, dy], i) => {
+          const r = Math.round((7 + (i % 3) * 3) * k)
+          const x = X(dx!)
+          const y = Y(dy!)
+
+          return `<g opacity="0"><ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r}" fill="#c46cd9" stroke="#6a2c8c" stroke-width="2"/><rect x="${x - Math.round(r / 2)}" y="${y - Math.round(r / 2)}" width="3" height="3" fill="#ffffff"/>${vola(0, -70 * k, t + i * 0.05, 0.7)}</g>`
+        })
+        .join('')
+  } else if (mossa === 'spettro') {
+    const fantasma = (a: number) => {
+      const x = X(Math.cos(a) * 58)
+      const y = Y(Math.sin(a) * 40)
+      const r = Math.round(14 * k)
+
+      return (
+        `<path fill="#e8e4f8" opacity="0.9" d="M${x - r} ${y + r}L${x - r} ${y - r / 2}L${x - r / 2} ${y - r}L${x + r / 2} ${y - r}L${x + r} ${y - r / 2}L${x + r} ${y + r}L${x + r / 2} ${y + r / 2}L${x} ${y + r}L${x - r / 2} ${y + r / 2}Z"/>` +
+        `<rect x="${x - 6}" y="${y - 4}" width="4" height="5" fill="${NERO}"/><rect x="${x + 3}" y="${y - 4}" width="4" height="5" fill="${NERO}"/>`
+      )
+    }
+    pezzi =
+      `<ellipse cx="${cx}" cy="${cy}" rx="0" ry="0" fill="#3c2c6c">${gonfia(Math.round(80 * k), t, 0.8, Math.round(70 * k), 0.55)}</ellipse>` +
+      `<g opacity="0">${angoli(3).map(fantasma).join('')}<animateTransform attributeName="transform" type="rotate" values="0 ${cx} ${cy};-240 ${cx} ${cy}" begin="${fra(t)}s" dur="0.8s" fill="freeze"/><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.75;1" begin="${fra(t)}s" dur="0.8s" fill="freeze"/></g>`
+  } else {
+    // normale: raffiche di vento che attraversano il bersaglio
+    pezzi = [[-30, 0], [-10, -1], [12, 1], [30, 0], [-22, 1], [20, -1]]
+      .map(([dy, verso], i) => {
+        const y = Y(dy! * 1.4)
+        const x = X(-90)
+        const w = Math.round(60 * k)
+
+        return `<g opacity="0"><path fill="none" stroke="${i % 2 ? '#ffffff' : '#dcefff'}" stroke-width="${Math.round(5 * k)}" stroke-linecap="round" d="M${x} ${y}Q${x + w / 2} ${y - 16 * (verso || 1)} ${x + w} ${y}"/>${vola(120 * k, 0, t + i * 0.06, 0.55)}</g>`
+      })
+      .join('')
+  }
+
+  return pezzi
+}
+
 export function svgLotta(s: Stato): string {
   const nem = s.nemico!
   const io = s.squadra[0]!
   const sc = SCENE[s.mondo] ?? SCENE[0]!
+  // i colpi del turno: chi attacca scatta, chi è colpito trema, e sopra l'effetto della mossa
+  let animaNem = ''
+  let animaIo = ''
+  const effetti = (s.colpi ?? [])
+    .map((c, i) => {
+      const t = 0.15 + i * DURATA_COLPO
+      const quando = t + impatto(c)
+      if (c.chi === 'io') {
+        animaIo += slancio(c, t)
+        animaNem += scossa(quando)
+      } else {
+        animaNem += slancio(c, t)
+        animaIo += scossa(quando)
+      }
+
+      return effetto(c.mossa, POSTI[c.chi === 'io' ? 'nemico' : 'io'], quando)
+    })
+    .join('')
   const corpo =
     svgTela(sfondo(s.mondo), 0, 0, 2) +
-    (stadio(nem) === 2 ? alone(470, 120, 84, 100) : '') +
-    (stadio(io) === 2 ? alone(170, 282, 104, 118) : '') +
-    mostro(nem, 470 - (SW * 4) / 2, 190 - PIEDI * 4, 4) +
-    mostro(io, 170 - (SW * 5) / 2, 366 - PIEDI * 5, 5, true) +
+    `<g>${stadio(nem) === 2 ? alone(470, 120, 84, 100) : ''}${mostro(nem, 470 - (SW * 4) / 2, 190 - PIEDI * 4, 4)}${animaNem}</g>` +
+    `<g>${stadio(io) === 2 ? alone(170, 282, 104, 118) : ''}${mostro(io, 170 - (SW * 5) / 2, 366 - PIEDI * 5, 5, true)}${animaIo}</g>` +
     (s.lancio ? sfera8(548, 160, 3, false, COLORE_SFERA[s.lanciata ?? 0]) : '') +
-    riquadro(nem, 20, 24, 300, false, s.catalogo.includes(nem.sp)) +
+    riquadro(nem, 20, 24, 300, false, s.catalogo.includes(formaDi(nem))) +
     riquadro(io, 324, 262, 300, true) +
     // Contro un allenatore: una sfera per ogni Mostrino che gli resta, e il suo nome.
     (s.allenatore
@@ -1198,7 +1482,8 @@ export function svgLotta(s: Stato): string {
         scritta(24 + (s.allenatore.squadra.length + 1) * 28 + 6, 125, s.allenatore.nome, 18, sc.testo)
       : '') +
     // Una sfera per ogni Mostrino della squadra (al massimo 3), grigia se è esausto.
-    s.squadra.map((m, i) => sfera8(330 + i * 28, 370, 3, m.hp === 0)).join('')
+    s.squadra.map((m, i) => sfera8(330 + i * 28, 370, 3, m.hp === 0)).join('') +
+    effetti
 
   return svg(640, 400, corpo)
 }
@@ -1306,14 +1591,14 @@ export function svgFestaMedaglie(s: Stato): string {
   return svg(640, 400, corpo)
 }
 
-// Il catalogo completo: i rari dei cinque mondi nella forma finale, che saltellano a turno.
+// Il catalogo completo: i leggendari dei cinque mondi nella forma finale, che saltellano a turno.
 export function svgFestaCatalogo(s: Stato): string {
-  const rari = MONDI.map((m, i) => {
+  const rari = MONDI.map((_, i) => {
     const x = 96 + i * 112
 
     return (
       `<ellipse cx="${x}" cy="306" rx="46" ry="9" fill="#6c6898"/>` +
-      `<g>${mostroIn({ sp: m.raro, evo: FORME - 1 }, x, 304, 2)}` +
+      `<g>${mostroIn({ sp: raroDel(i, 'leggendario'), evo: FORME - 1 }, x, 304, 2)}` +
       `<animateTransform attributeName="transform" type="translate" values="0 0;0 -14;0 0" begin="${(i * 0.2).toFixed(1)}s" dur="1s" repeatCount="indefinite"/></g>`
     )
   }).join('')
@@ -1332,31 +1617,115 @@ export function svgFestaCatalogo(s: Stato): string {
 
 // ---------- Menu, scelta iniziale e catalogo ----------
 
-// Il paesaggio del menu e della scelta iniziale: il cielo arriva fino al prato, così tra le colline
-// non resta vuoto, e una collina lontana riempie la valle in mezzo.
+// Il paesaggio del menu e della scelta iniziale: cielo a fasce col sole e qualche uccellino, montagne
+// innevate in lontananza, colline con gli alberi, un laghetto con la ninfea, il prato pieno di fiori
+// e farfalle, e le tre pedane dei Mostrini.
 function prato(alto: number): string {
   const t = tela(320, alto)
   const sc = SCENE[0]!
+  const r = seme(7)
   const orizzonte = Math.round(alto * 0.7)
-  const fascia = orizzonte / sc.cielo.length
-  sc.cielo.forEach((c, i) => rett(t, 0, Math.round(i * fascia), 320, Math.round((i + 1) * fascia) - Math.round(i * fascia), c))
-  nuvola(t, 50, 20, 1)
-  nuvola(t, 270, 14, 0.8)
+  const cielo = ['#5cb4f0', '#70c0f4', '#86ccf8', '#9cd6fb', '#b4e2fd', '#cdecff', '#e2f5ff']
+  const fascia = orizzonte / cielo.length
+  cielo.forEach((c, i) => rett(t, 0, Math.round(i * fascia), 320, Math.round((i + 1) * fascia) - Math.round(i * fascia), c))
+  // il sole con i raggi
+  for (const [dx, dy] of [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]] as const) {
+    for (let k = 15; k < 20; k++) rett(t, Math.round(286 + dx * k), Math.round(22 + dy * k), 2, 2, '#ffe68c')
+  }
+  ellisse(t, 286, 22, 12, 12, '#ffc83c')
+  ellisse(t, 285, 21, 10, 10, '#ffe68c')
+  ellisse(t, 283, 19, 5, 5, '#fff6c8')
+  nuvola(t, 46, 18, 1)
+  nuvola(t, 150, 10, 0.6)
+  nuvola(t, 222, 30, 0.7)
+  // uccellini in volo
+  for (const [x, y] of [[112, 26], [122, 20], [196, 14]] as const) {
+    for (const [dx, dy] of [[-2, -1], [-1, 0], [0, 1], [1, 0], [2, -1]] as const) metti(t, x + dx, y + dy, '#4a5a7a')
+  }
+  // le montagne lontane, con la neve in cima
+  for (const [a, b, cima] of [[20, 150, 42], [110, 240, 32], [200, 330, 46]] as const) {
+    const mezzo = (a + b) / 2
+    poligono(t, [[mezzo, cima], [a, orizzonte - 4], [b, orizzonte - 4]], (x: number) => (x < mezzo ? '#a4bce0' : '#8ea8d4'))
+    poligono(t, [[mezzo, cima], [mezzo - 9, cima + 10], [mezzo - 3, cima + 7], [mezzo + 3, cima + 11], [mezzo + 9, cima + 10]], '#ffffff')
+  }
+  // le colline, con gli alberi sopra
   ellisse(t, 160, alto * 0.72, 90, 16, '#b4e4a0')
   ellisse(t, 60, alto * 0.66, 90, 20, '#9fd88a')
   ellisse(t, 260, alto * 0.68, 100, 22, '#8ccf78')
+  for (const [x, y, s] of [[14, 74, 1], [30, 79, 0.8], [296, 76, 1], [312, 81, 0.85], [228, 80, 0.7]] as const) {
+    rett(t, x - 1, y, 3, Math.round(9 * s), '#7a5230')
+    ellisse(t, x, y - 3 * s, 8 * s, 9 * s, '#3f9a3c')
+    ellisse(t, x - 2 * s, y - 6 * s, 4 * s, 4 * s, '#5fb85a')
+  }
+  // il prato, più chiaro verso l'orizzonte, con ciuffi d'erba
   rett(t, 0, orizzonte, 320, alto - orizzonte, sc.prato)
-  rett(t, 0, orizzonte, 320, 2, chiaro(sc.prato, 0.2))
+  rett(t, 0, orizzonte, 320, 6, chiaro(sc.prato, 0.12))
+  rett(t, 0, orizzonte, 320, 2, chiaro(sc.prato, 0.25))
+  for (let i = 0; i < 70; i++) {
+    const x = Math.floor(r() * 318)
+    const y = orizzonte + 4 + Math.floor(r() * (alto - orizzonte - 5))
+    metti(t, x, y, '#6cbc5a')
+    metti(t, x + 1, y - 1, '#6cbc5a')
+    metti(t, x + 2, y, '#6cbc5a')
+  }
+  // il laghetto con la ninfea, in basso a sinistra
+  ellisse(t, 16, alto - 10, 24, 8, '#3a8ac8')
+  ellisse(t, 16, alto - 11, 22, 6, '#4ca3e0')
+  rett(t, 4, alto - 13, 8, 1, '#9fdcff')
+  rett(t, 20, alto - 9, 6, 1, '#9fdcff')
+  ellisse(t, 28, alto - 12, 4, 2, '#3fa84a')
+  metti(t, 28, alto - 13, '#ff9ad0')
+  // i fiori, lontano dalle pedane
+  const colori = ['#ff5a4c', '#ffffff', '#ff9ad0', '#c46cd9', '#ff9a3c', '#4cb4ff']
+  for (let i = 0; i < 46; i++) {
+    const x = 2 + Math.floor(r() * 316)
+    const y = orizzonte + 4 + Math.floor(r() * (alto - orizzonte - 6))
+    const suPedana = [75, 160, 245].some(cx => Math.abs(x - cx) < 40 && y > alto - 24)
+    if (suPedana || (x < 44 && y > alto - 20)) continue
+    const c = colori[i % colori.length]!
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) metti(t, x + dx, y + dy, c)
+    metti(t, x, y, '#ffd84c')
+  }
+  // due farfalle
+  for (const [x, y, c] of [[118, 84, '#ff9a3c'], [206, 80, '#c46cd9']] as const) {
+    rett(t, x - 3, y - 2, 2, 2, c)
+    rett(t, x + 2, y - 2, 2, 2, c)
+    rett(t, x - 2, y, 1, 1, chiaro(c, 0.4))
+    rett(t, x + 2, y, 1, 1, chiaro(c, 0.4))
+    rett(t, x, y - 2, 1, 3, NERO)
+  }
   for (const cx of [75, 160, 245]) pedana(t, cx, alto - 14, 34, 6, sc)
 
   return svgTela(t, 0, 0, 2)
+}
+
+// Il titolo a lettere colorate, un po' ondeggiante, con l'ombra sotto e qualche scintilla.
+function titolo(cx: number, y: number, testo: string, dim: number): string {
+  const colori = ['#ff5a4c', '#ff9a3c', '#ffd84c', '#6fd36f', '#4cb4ff', '#7a8cff', '#c46cd9', '#ff7ab8']
+  const passo = dim * 0.6
+  const x0 = cx - (testo.length * passo) / 2 + passo / 2
+  const lettere = testo
+    .split('')
+    .map((c, i) => {
+      const x = Math.round(x0 + i * passo)
+      const yy = y + (i % 2 ? 4 : -2)
+
+      return scritta(x + 4, yy + 5, c, dim, NERO, 'middle') + scritta(x, yy, c, dim, colori[i % colori.length]!, 'middle', NERO)
+    })
+    .join('')
+  const scintille = [[cx - 190, y - 34], [cx + 186, y - 30], [cx - 160, y + 14], [cx + 200, y + 8]]
+    .map(([x, yy]) => `<path fill="#fff3b0" d="M${x! - 5} ${yy! - 1}h11v3h-11zM${x! - 1} ${yy! - 5}h3v11h-3z"/>`)
+    .join('')
+
+  return scintille + lettere
 }
 
 // Il menu principale: il titolo con i tre Mostrini iniziali.
 export function svgMenu(): string {
   const corpo =
     prato(130) +
-    scritta(320, 66, 'MOSTRINI', 56, '#ffd84c', 'middle', NERO) +
+    titolo(320, 64, 'MOSTRINI', 58) +
+    scritta(320, 100, 'Acchiappali nei cinque mondi!', 16, '#ffffff', 'middle', NERO) +
     scritta(628, 252, `versione ${VERSIONE}`, 14, '#ffffff', 'end', NERO) +
     INIZIALI.map((sp, i) => mostroIn({ sp }, 150 + i * 170, 238, 3)).join('')
 
@@ -1382,12 +1751,24 @@ const COLORE_TIPO: Record<string, string> = {
   ghiaccio: '#4cb4d8', roccia: '#9a7a52', terra: '#b8863c', veleno: '#9c4cc8', spettro: '#6c5cc8',
 }
 
+// Il testo spezzato in righe di al più max caratteri, a parole intere.
+function aCapo(testo: string, max: number): string[] {
+  const righe: string[] = []
+  for (const parola of testo.split(' ')) {
+    const ultima = righe[righe.length - 1]
+    if (ultima !== undefined && ultima.length + 1 + parola.length <= max) righe[righe.length - 1] = `${ultima} ${parola}`
+    else righe.push(parola)
+  }
+
+  return righe
+}
+
 // Il punto di domanda dei Mostrini mai visti.
 const DOMANDA = ['.kkkk.', 'kk..kk', '....kk', '...kk.', '..kk..', '..kk..', '......', '..kk..']
 
 // Il catalogo: per ogni mondo tre pagine da tre righe; ogni riga è una specie con le sue tre forme
 // (base, evoluta, finale), e ogni scheda ha il Mostrino, il numero, il nome e il tipo.
-// In fondo tutte le 135 forme: una colonna per specie, con le tre forme una sotto l'altra.
+// In fondo la linea evolutiva del Mostrino scelto, con la sua bio.
 export function svgCatalogo(s: Stato): string {
   const cv = s.catalogoVista ?? { mondo: s.mondo, sel: 0 }
   const voci = vociCatalogo(s, cv.mondo)
@@ -1397,7 +1778,7 @@ export function svgCatalogo(s: Stato): string {
   const domanda = tela(6, 8)
   lettere(domanda, DOMANDA, { k: '#8a86a0' }, 0, 0)
   let corpo =
-    `<rect width="640" height="462" fill="#2c2a48"/>` +
+    `<rect width="640" height="614" fill="#2c2a48"/>` +
     `<rect width="640" height="52" fill="#423e6c"/>` +
     scritta(20, 34, `Catalogo · ${MONDI[cv.mondo]!.nome}`, 22, '#ffffff') +
     scritta(330, 33, `pag. ${pagina + 1}/${pagine}`, 15, '#c8c4e0') +
@@ -1419,7 +1800,7 @@ export function svgCatalogo(s: Stato): string {
       `<ellipse cx="${x + 46}" cy="${y + 92}" rx="32" ry="6" fill="${scuro(fondo, 0.15)}"/>` +
       (v.visto ? mostroIn({ sp: v.sp, evo: v.st }, x + 46, y + 94, 2) : svgTela(domanda, x + 31, y + 46, 5)) +
       scritta(x + 92, y + 28, numeroVoce(v), 15, '#6c6880') +
-      scritta(x + 92, y + 52, v.visto ? nomeForma(v.sp, v.st) : SCONOSCIUTO, 17, v.visto ? NERO : '#6c6880') +
+      scritta(x + 92, y + 52, v.visto ? nomeForma(v.sp, v.st) : SCONOSCIUTO, v.visto && nomeForma(v.sp, v.st).length > 10 ? 14 : 17, v.visto ? NERO : '#6c6880') +
       (v.visto && !v.preso ? scritta(x + 186, y + 100, 'visto', 13, '#6c6880', 'end') : '')
     // la freccia verso la forma dopo, tra una scheda e l'altra
     if (v.st < FORME - 1) corpo += `<path fill="#c8c4e0" d="M${x + 200} ${y + 49}l5 6l-5 6z"/>`
@@ -1429,24 +1810,44 @@ export function svgCatalogo(s: Stato): string {
         scritta(x + 134, y + 78, d.tipo, 14, '#ffffff', 'middle')
     }
     if (v.preso) corpo += sfera8(x + 166, y + 14, 2)
-    if (v.raro && v.visto) corpo += scritta(x + 92, y + 100, 'raro', 13, '#b8862c')
+    if (v.rarita !== 'comune' && v.visto) corpo += gemme(x + 92, y + 88, v.rarita)
   })
-  // Tutte le forme: rosse le catturate, lilla le viste, scure quelle mai viste; sotto il mondo aperto una riga d'oro.
-  const tutte = MONDI.map((_, m) => vociCatalogo(s, m))
-  const visti = tutte.flat().filter(v => v.visto && !v.preso).length
-  corpo += scritta(14, 434, `Tutte le ${tutte.flat().length} forme · prese ${s.catalogo.length} · viste ${visti}`, 14, '#c8c4e0')
-  tutte.forEach((voci, m) => {
-    const x0 = 50 + m * 118
-    if (m === cv.mondo) corpo += `<rect x="${x0}" y="458" width="106" height="3" fill="#ffd84c"/>`
-    voci.forEach((v, k) => {
-      const x = x0 + Math.floor(k / FORME) * 12
-      const y = 440 + v.st * 5
-      if (m === cv.mondo && k === cv.sel) corpo += `<rect x="${x - 1}" y="${y - 1}" width="12" height="6" fill="#ffffff"/>`
-      corpo += `<rect x="${x}" y="${y}" width="10" height="4" fill="${v.preso ? '#e8483c' : v.visto ? '#b8b0e0' : '#4a4668'}"/>`
-    })
+  // In fondo la linea evolutiva del Mostrino scelto (base, evoluta, finale) con la forma scelta
+  // evidenziata, e a lato la sua scheda: nome, tipo e bio.
+  const scelta = voci[cv.sel]!
+  corpo += `<rect x="14" y="424" width="612" height="160" rx="8" fill="#3a3660" shape-rendering="auto"/>`
+  voci.filter(v => v.sp === scelta.sp).forEach(v => {
+    const cx = 74 + v.st * 116
+    const fondo = v.preso ? '#fbf5e4' : v.visto ? '#ebe7f3' : '#d0ccdc'
+    const scelto = v.st === scelta.st
+    corpo +=
+      `<rect x="${cx - 52}" y="432" width="104" height="108" rx="8" fill="${scelto ? '#ffd84c' : '#5a5680'}" shape-rendering="auto"/>` +
+      `<rect x="${cx - 48}" y="436" width="96" height="100" rx="5" fill="${fondo}" shape-rendering="auto"/>` +
+      `<ellipse cx="${cx}" cy="522" rx="32" ry="6" fill="${scuro(fondo, 0.15)}"/>` +
+      (v.visto ? mostroIn({ sp: v.sp, evo: v.st }, cx, 524, 2) : svgTela(domanda, cx - 15, 474, 5)) +
+      (v.preso ? sfera8(cx + 28, 442, 2) : '') +
+      scritta(cx, 560, v.visto ? nomeForma(v.sp, v.st) : SCONOSCIUTO, 15, scelto ? '#ffd84c' : '#ffffff', 'middle') +
+      scritta(cx, 577, v.st === 0 ? 'base' : `Lv ${LIVELLI_EVO[v.st - 1]}`, 12, '#c8c4e0', 'middle')
+    if (v.st < FORME - 1) corpo += `<path fill="#c8c4e0" d="M${cx + 56} 478L${cx + 64} 486L${cx + 56} 494Z"/>`
   })
+  const d = SPECIE[scelta.sp]!
+  corpo += scritta(372, 452, `${numeroVoce(scelta)} ${scelta.visto ? nomeForma(scelta.sp, scelta.st) : SCONOSCIUTO}`, 17, '#ffffff')
+  if (scelta.visto) {
+    const stato = [scelta.preso ? (scelta.rarita === 'comune' ? 'catturato' : 'preso') : 'visto', scelta.rarita !== 'comune' ? scelta.rarita : ''].filter(Boolean).join(' · ')
+    corpo +=
+      `<rect x="372" y="462" width="84" height="22" rx="5" fill="${COLORE_TIPO[d.tipo] ?? '#888'}" shape-rendering="auto"/>` +
+      scritta(414, 478, d.tipo, 14, '#ffffff', 'middle') +
+      scritta(466, 478, stato, 13, scelta.rarita !== 'comune' ? COLORE_RARITA[scelta.rarita] : '#c8c4e0')
+  }
+  const bio = scelta.visto
+    ? `${BIO[scelta.sp] ?? ''} Forte contro ${fortiContro(d.tipo).join(' e ')}, debole contro ${deboliContro(d.tipo).join(' e ')}.`
+    : `Non l'hai ancora incontrato. Vive ${MONDI[d.mondo]!.nel}.`
+  // il carattere è monospace: a 12 px ogni lettera è larga circa 7 px, e nel pannello ce ne stanno 34
+  aCapo(bio, 34).slice(0, 6).forEach((r, i) => (corpo += scritta(372, 504 + i * 15, r, 12, '#e8e4f8')))
+  const visti = MONDI.flatMap((_, m) => vociCatalogo(s, m)).filter(v => v.visto && !v.preso).length
+  corpo += scritta(14, 604, `Tutte le ${Object.keys(SPECIE).length * FORME} forme · prese ${s.catalogo.length} · viste ${visti}`, 14, '#c8c4e0')
 
-  return svg(640, 462, corpo)
+  return svg(640, 614, corpo)
 }
 
 // animato: il disegno contiene un'animazione, e il pannello deve mostrarlo in modo interattivo perché parta.
@@ -1463,7 +1864,7 @@ export function svgPer(s0: Stato): { source: string; alt: string; animato?: bool
   if (s.modo === 'menu') return { source: svgMenu(), alt: 'Mostrini: menu principale' }
   if (s.modo === 'inizio') return { source: svgInizio(), alt: 'Scegli il tuo primo Mostrino' }
   if (s.modo === 'lotta' && s.nemico && s.squadra[0]) {
-    return { source: svgLotta(s), alt: `Lotta contro ${nome(s.nemico)}` }
+    return { source: svgLotta(s), alt: `Lotta contro ${nome(s.nemico)}`, ...(s.colpi?.length ? { animato: true } : {}) }
   }
   if (s.catalogoVista) return { source: svgCatalogo(s), alt: `Catalogo dei Mostrini: ${MONDI[s.catalogoVista.mondo]?.nome ?? ''}` }
   if (s.inPalestra) return { source: svgPalestra(s), alt: `Palestra ${MONDI[s.mondo]!.del}` }

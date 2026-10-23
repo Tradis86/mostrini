@@ -107,12 +107,20 @@ export const register: Register = on => {
     const grafica = !!Svg
     const stato = grafica ? await read($, vista) : null
     const disegno = stato ? svgPer(stato) : null
+    // le misure scritte nell'SVG (512 x 320 per la lotta e l'evoluzione)
+    const misure = disegno && /width="(\d+)" height="(\d+)"/.exec(disegno.source)
 
     return (
       <Box flexDirection="column" flexGrow={1}>
-        {/* Le animazioni (l'evoluzione) partono solo nel riquadro interattivo, che riceve le misure
-            esplicite per restare grande quanto la lotta (512 x 320). */}
-        {disegno && <Svg source={disegno.source} alt={disegno.alt} {...(disegno.animato ? { isInteractive: true, width: 512, height: 320 } : {})} />}
+        {/* Le animazioni (evoluzione, feste, colpi in lotta) partono solo nel riquadro interattivo,
+            che riceve le misure esplicite per restare grande quanto il disegno fermo. */}
+        {disegno && (
+          <Svg
+            source={disegno.source}
+            alt={disegno.alt}
+            {...(disegno.animato ? { isInteractive: true, width: Number(misure?.[1] ?? 512), height: Number(misure?.[2] ?? 320) } : {})}
+          />
+        )}
         <el.Client key="gioco" module="./gioco.tsx" props={{ partite: salvati.partite, attiva: salvati.attiva, grafica }} flexGrow={1} />
       </Box>
     )

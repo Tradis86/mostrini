@@ -56,8 +56,13 @@ export type Stato = {
   // nel menu: si sta scegliendo quale partita cancellare, e quale aspetta la conferma
   cancella?: boolean
   daCancellare?: number | null
-  // il catalogo aperto con L: la pagina del mondo mostrata e il Mostrino scelto (0-8)
+  // il catalogo aperto con L: la pagina del mondo mostrata e la forma scelta
   catalogoVista?: { mondo: number; sel: number } | null
+  // il galleggiante in acqua dopo una pescata andata a vuoto: resta lì finché non ti muovi
+  pesca?: { x: number; y: number } | null
+  // in lotta, i colpi dell'ultimo turno da animare, in ordine: chi attacca e con che mossa
+  // ('botta' è la Botta, uguale per tutti; altrimenti il tipo della mossa)
+  colpi?: { chi: 'io' | 'nemico'; mossa: Tipo | 'botta' }[]
 }
 
 // Le partite salvate, una per casella, e l'ultima giocata.

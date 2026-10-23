@@ -4,7 +4,7 @@ import {
   MAPPA, MONDI, SPECIE, SFERE, CURE, SFERE_MAX, CURE_MAX, VERSIONE, bioma, livelloNel, evolve, nome, maxHp, stadio, vociCatalogo, descrizione,
   articoli, probCattura, allievi, vinteIn, medaglia, squadraCapo, contiCatalogo, numeroVoce, FORME,
   muoviInPalestra, casellaSalone, postoSfidante, saloneLargo, TAPPETO, ANELLO, fortiContro, deboliContro, BIO,
-  festeggia, tutteLeMedaglie, catalogoCompleto,
+  festeggia, tutteLeMedaglie, catalogoCompleto, rarita, comune, nellAcqua, nellErba, pesca, acquaVicina, CATTURA_RARITA,
 } from '../hooks/gioco.tsx'
 import type { Stato } from '../hooks/gioco.tsx'
 import { DISEGNI, svgPer } from '../hooks/grafica.ts'
@@ -12,9 +12,12 @@ import { DISEGNI, svgPer } from '../hooks/grafica.ts'
 test('la mappa è rettangolare e ogni specie ha una mossa', () => {
   for (const m of MONDI) for (const riga of m.mappa) expect(riga.length).toBe(MAPPA[0]!.length)
   expect(MONDI.length).toBe(5)
-  MONDI.forEach((m, i) => {
-    expect(specieDel(i).length).toBe(9)
-    expect(specieDel(i)).toContain(m.raro)
+  MONDI.forEach((_, i) => {
+    // 9 comuni nella Prateria e 8 negli altri mondi, più un raro, un epico e un leggendario;
+    // ogni mondo ha almeno un Mostrino d'acqua comune da pescare
+    expect(specieDel(i).length).toBe(i === 4 ? 12 : 11)
+    for (const r of ['raro', 'epico', 'leggendario'] as const) expect(specieDel(i).filter(sp => rarita(sp) === r).length).toBe(1)
+    expect(nellAcqua(i).some(comune)).toBe(true)
   })
   // ogni specie ha il suo disegno in pixel art, con il cappello largo 12
   for (const sp of Object.keys(SPECIE)) expect(DISEGNI[sp]?.cappello.every(r => r.length === 12)).toBe(true)
@@ -123,7 +126,8 @@ test('in palestra si entra in un salone: n+2 allievi in fila, poi il capopalestr
   // il capopalestra chiude con il raro del mondo, più forte degli altri
   for (let m = 0; m < MONDI.length; m++) {
     const squadra = squadraCapo(m)
-    expect(squadra.at(-1)!.sp).toBe(MONDI[m]!.raro)
+    expect(rarita(squadra.at(-1)!.sp)).toBe('raro')
+    expect(squadra.slice(0, -1).every(x => comune(x.sp))).toBe(true)
     expect(squadra.every(x => x.lvl > MONDI[m]!.lvlMax)).toBe(true)
   }
 })
@@ -135,8 +139,8 @@ test('il portale si apre con la medaglia della palestra, non col catalogo', () =
   s = { ...s, palestre: [allievi(0) + 1, 0, 0, 0, 0] }
   s = muovi(s, 1, 0, () => 0.99)
   expect(s.mondo).toBe(1)
-  // sulle Vette il catalogo conta le forme di due mondi: 2 x 27
-  expect(catalogoDel(s)).toEqual({ presi: 9, tot: 54 })
+  // sulle Vette il catalogo conta le forme di due mondi: 2 x 33
+  expect(catalogoDel(s)).toEqual({ presi: 11, tot: 66 })
   // il P delle Vette Gelate è in (18,1): chiuso finché non vinci la loro palestra
   expect(muovi({ ...s, x: 17, y: 1 }, 1, 0, () => 0.99).mondo).toBe(1)
   const deserto = muovi({ ...s, x: 17, y: 1, palestre: [4, allievi(1) + 1, 0, 0, 0] }, 1, 0, () => 0.99)
@@ -357,14 +361,14 @@ test('sconfiggere segna un Mostrino come visto, solo catturarlo lo mette nel cat
   expect(incontro.visti).toContain(incontro.nemico!.sp)
 })
 
-test('il catalogo ha una voce per ogni forma: 27 per mondo, 135 in tutto', () => {
+test('il catalogo ha una voce per ogni forma: 33 per mondo (36 nelle Rovine), 168 in tutto', () => {
   let s = scegliIniziale(statoIniziale(), 0)
   s = { ...s, catalogo: ['braciotto', 'braciotto:1', 'zampetto'], visti: ['braciotto', 'braciotto:1', 'braciotto:2', 'zampetto', 'piumino'] }
   s = tasto(s, { key: 'l' })
   expect(s.catalogoVista).toEqual({ mondo: 0, sel: 0 })
   const voci = vociCatalogo(s, 0)
-  expect(voci.length).toBe(9 * FORME)
-  expect(MONDI.flatMap((_, m) => vociCatalogo(s, m)).length).toBe(135)
+  expect(voci.length).toBe(11 * FORME)
+  expect(MONDI.flatMap((_, m) => vociCatalogo(s, m)).length).toBe(168)
   // ogni riga è una specie con le sue tre forme, numerate di seguito
   expect(voci.slice(0, 3).map(v => [v.sp, v.st, numeroVoce(v)])).toEqual([['braciotto', 0, '#001'], ['braciotto', 1, '#002'], ['braciotto', 2, '#003']])
   expect(voci.filter(v => v.preso).map(v => `${v.sp}:${v.st}`)).toEqual(['braciotto:0', 'braciotto:1', 'zampetto:0'])
@@ -376,14 +380,14 @@ test('il catalogo ha una voce per ogni forma: 27 per mondo, 135 in tutto', () =>
   expect(descrizione(voci[3]!)).toContain('?????')
   expect(descrizione(voci[3]!)).not.toContain('Fumarello')
   expect(descrizione(vociCatalogo(s, 2)[0]!)).toContain('?????')
-  expect(contiCatalogo(s)[0]).toEqual({ presi: 3, visti: 5, tot: 27 })
-  expect(catalogoDel(s)).toEqual({ presi: 3, tot: 27 })
+  expect(contiCatalogo(s)[0]).toEqual({ presi: 3, visti: 5, tot: 33 })
+  expect(catalogoDel(s)).toEqual({ presi: 3, tot: 33 })
   // frecce: destra scorre, giù salta una riga (una specie), oltre l'ultima forma si passa al mondo dopo
   s = tasto(s, { key: 'right' })
   expect(s.catalogoVista?.sel).toBe(1)
   s = tasto(s, { key: 'down' })
   expect(s.catalogoVista?.sel).toBe(4)
-  s = { ...s, catalogoVista: { mondo: 0, sel: 26 } }
+  s = { ...s, catalogoVista: { mondo: 0, sel: 32 } }
   s = tasto(s, { key: 'right' })
   expect(s.catalogoVista).toEqual({ mondo: 1, sel: 0 })
   s = tasto(s, { key: '5' })
@@ -391,6 +395,23 @@ test('il catalogo ha una voce per ogni forma: 27 per mondo, 135 in tutto', () =>
   // mentre il catalogo è aperto non ci si muove, e L lo chiude
   expect(tasto(s, { key: 'up' }).x).toBe(s.x)
   expect(tasto(s, { key: 'l' }).catalogoVista).toBeNull()
+})
+
+test('in fondo al catalogo la linea evolutiva della forma scelta, con la sua bio', () => {
+  const s = { ...scegliIniziale(statoIniziale(), 0), catalogo: ['braciotto'], visti: ['braciotto', 'braciotto:1'] }
+  const giu = (sel: number) => svgPer({ ...s, catalogoVista: { mondo: 0, sel } }).source.split('<rect x="14" y="424"')[1]!
+  // la forma scelta è l'evoluta: la linea mostra base, evoluta e la finale ancora da scoprire, e la bio
+  const linea = giu(1)
+  expect(linea).toContain('Braciotto')
+  expect(linea).toContain('Bracione')
+  expect(linea).toContain('?????')
+  expect(linea).toContain('#002 Bracione')
+  expect(linea).toContain('fiammella')
+  expect(linea).toContain('Lv 35')
+  // un Mostrino mai visto non svela né nome né bio, solo dove vive
+  const ignoto = giu(3)
+  expect(ignoto).not.toContain('Fumarello')
+  expect(ignoto).toContain('Prateria')
 })
 
 test('le feste: tutte le medaglie e il catalogo completo', () => {
@@ -439,11 +460,89 @@ test('ogni disegno sta nel limite del pannello', () => {
     for (const sel of [0, 9, 18]) disegni.push(svgPer({ ...base, mondo, catalogoVista: { mondo, sel } }))
     disegni.push(svgPer({ ...base, mondo, inPalestra: { x: 5, y: TAPPETO }, palestre: [2, 2, 2, 2, 2] }))
     disegni.push(svgPer({ ...base, mondo, modo: 'lotta', squadra: [forte, forte, forte], nemico: forte, lancio: true, lanciata: 4, allenatore: { nome: 'Custode Elio', squadra: [forte, forte], palestra: 'capo' } }))
+    disegni.push(svgPer({ ...base, mondo, catalogoVista: { mondo, sel: specieDel(mondo).length * FORME - 1 } }))
+    // i colpi animati di ogni tipo, insieme alla Botta del nemico
+    for (const mossa of ANELLO) {
+      const lotta = svgPer({ ...base, mondo, modo: 'lotta', squadra: [forte], nemico: forte, colpi: [{ chi: 'io', mossa }, { chi: 'nemico', mossa: 'botta' }] })
+      expect(lotta.animato).toBe(true)
+      disegni.push(lotta)
+    }
   })
   for (const d of disegni) {
     expect(d.source.startsWith('<svg')).toBe(true)
     expect(d.source.length).toBeLessThan(131072)
   }
+})
+
+// Un rnd che dà i valori in fila, poi sempre 0.5.
+const inFila = (...valori: number[]) => () => valori.shift() ?? 0.5
+
+test('i Mostrini d\'acqua si trovano solo pescando, dalla riva', () => {
+  for (let m = 0; m < MONDI.length; m++) {
+    expect(nellErba(m).every(sp => SPECIE[sp]!.tipo !== 'acqua')).toBe(true)
+    expect(nellAcqua(m).length).toBeGreaterThan(0)
+  }
+  // nella Prateria in (10,6) c'è l'acqua a destra; dal Centro cure no
+  let s = { ...scegliIniziale(statoIniziale(), 0), x: 10, y: 6 }
+  expect(acquaVicina(s)).toEqual({ x: 11, y: 6 })
+  expect(acquaVicina(scegliIniziale(statoIniziale(), 0))).toBeNull()
+  expect(tasto(scegliIniziale(statoIniziale(), 0), { key: 'f' }).log.at(-1)).toContain('riva')
+  // non abbocca niente: il galleggiante resta in acqua finché non ti muovi
+  const vuota = pesca(s, inFila(0.9))
+  expect(vuota.modo).toBe('mappa')
+  expect(vuota.pesca).toEqual({ x: 11, y: 6 })
+  expect(svgPer(vuota).source).toContain('#e8483c')
+  expect(tasto(vuota, { key: 'left' }).pesca).toBeNull()
+  // abbocca: un Mostrino d'acqua, e con un po' di fortuna il leggendario Carpadoro
+  s = pesca(s, inFila(0.1, 0.5))
+  expect(s.modo).toBe('lotta')
+  expect(SPECIE[s.nemico!.sp]!.tipo).toBe('acqua')
+  expect(s.log.at(-1)).toContain('Hai pescato')
+  const oro = pesca({ ...s, modo: 'mappa', nemico: null }, inFila(0.1, 0.01, 0))
+  expect(oro.nemico!.sp).toBe('carpadoro')
+  expect(oro.log.at(-1)).toContain('leggendario')
+  // nel catalogo i Mostrini d'acqua dicono dove pescarli
+  expect(descrizione(vociCatalogo(s, 0).find(v => v.sp === 'ondina')!)).toContain('Si pesca nella Prateria')
+})
+
+test('rari, epici e leggendari: più rari, più forti, più difficili da catturare', () => {
+  // dall'erba della Prateria, con il tiro giusto, esce l'epico Trifoglio, due livelli più su
+  const s = { ...scegliIniziale(statoIniziale(), 0), x: 4, y: 2 }
+  const epico = muovi(s, 1, 0, inFila(0.01, 0.5, 0.02, 0))
+  expect(epico.nemico!.sp).toBe('trifoglio')
+  expect(rarita('trifoglio')).toBe('epico')
+  expect(epico.nemico!.lvl).toBe(MONDI[0]!.lvlMin + 3 + 2)
+  // il leggendario della Prateria si pesca soltanto: nell'erba quel tiro dà un comune
+  expect(comune(muovi(s, 1, 0, inFila(0.01, 0.5, 0.001, 0)).nemico!.sp)).toBe(true)
+  // la cattura: il leggendario si prende il 60% meno di un comune
+  const m = { lvl: 5, xp: 0, hp: 0 }
+  const p = (sp: string) => probCattura(s, { ...m, sp, hp: maxHp({ ...m, sp }) }, 0)
+  expect(Math.round((p('carpadoro') / p('goccetto')) * 100) / 100).toBe(CATTURA_RARITA.leggendario)
+  expect(p('trifoglio')).toBeLessThan(p('scintillo'))
+  expect(p('scintillo')).toBeLessThan(p('zampetto'))
+  // in lotta e nel catalogo la rarità si vede
+  expect(svgPer(epico).source).toContain('#c46cd9')
+  expect(descrizione({ ...vociCatalogo(s, 0).find(v => v.sp === 'trifoglio')!, visto: true })).toContain('epico')
+})
+
+test('in lotta le mosse si animano: chi attacca si muove, sul colpito l\'effetto; la Botta fa SBAM', () => {
+  let s = { ...scegliIniziale(statoIniziale(), 0), x: 4, y: 2 }
+  s = muovi(s, 1, 0, inFila(0.01, 0.5))
+  expect(s.modo).toBe('lotta')
+  expect(svgPer(s).animato).toBeUndefined()
+  // 2 Fiammata, poi il nemico risponde con la Botta
+  s = { ...s, nemico: { ...s.nemico!, hp: 999 } }
+  const turno = azione(s, 1, () => 0.5)
+  expect(turno.colpi).toEqual([{ chi: 'io', mossa: 'fuoco' }, { chi: 'nemico', mossa: 'botta' }])
+  const disegno = svgPer(turno)
+  expect(disegno.animato).toBe(true)
+  expect(disegno.source).toContain('SBAM!')
+  expect(disegno.source).toContain('animateTransform')
+  // un tasto che non cambia niente lascia l'animazione, uno che cambia qualcosa la toglie
+  expect(tasto(turno, { key: 'x' })).toBe(turno)
+  expect(tasto(turno, { key: 'down' }).colpi).toBeUndefined()
+  // con la Botta del giocatore il colpo è 'botta', uguale per tutti
+  expect(tasto({ ...s, scelta: 0 }, { key: '1' }).colpi?.[0]).toEqual({ chi: 'io', mossa: 'botta' })
 })
 
 test('i tipi si battono a vicenda in cerchio, tutti in equilibrio', () => {
@@ -629,7 +728,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(salvati[0].partite[0].squadra[0].sp).toBe('goccetto')
     // L apre il catalogo della Prateria e lo richiude
     await ui.key({ in: 'gioco', key: 'l' })
-    expect(await ui.find({ in: 'gioco', text: /Catalogo · 1\/5 Prateria 1\/27/ })).toBeTruthy()
+    expect(await ui.find({ in: 'gioco', text: /Catalogo · 1\/5 Prateria 1\/33/ })).toBeTruthy()
     await ui.key({ in: 'gioco', key: 'l' })
     expect(await ui.find({ in: 'gioco', text: /L catalogo/ })).toBeTruthy()
     // un passo e poi P: la partita si salva con la nuova posizione e si torna al menu
